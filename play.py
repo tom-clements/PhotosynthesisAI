@@ -1,5 +1,5 @@
-from code.board import Board
-from code.player import Player
+from game.board import Board
+from game.player import Player
 
 if __name__ == '__main__':
     board = Board(2)
@@ -13,4 +13,3 @@ if __name__ == '__main__':
     board.start_round(players)
     moves = p1.moves_available(board)
     print(moves)
-:

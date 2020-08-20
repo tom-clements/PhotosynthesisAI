@@ -16,7 +16,7 @@ class Grow(Move):
     cost: int
 
     def execute(self):
-        self.board.grow_tree(self.from_tree, self.to_tree)
+        self.board.grow_tree(self.from_tree, self.to_tree, self.cost)
         return self.board
 
 @dataclass
@@ -26,16 +26,17 @@ class Plant(Move):
     cost: int = PLANT_LP_COST
 
     def execute(self):
-        self.board.plant_tree(self.tile, self.tree)
+        self.board.plant_tree(self.tile, self.tree, self.cost)
         return self.board
 
 
 @dataclass
 class Buy(Move):
     tree: Tree
-    cost: int = 0
+    cost: int
 
     def execute(self):
+        self.board.buy_tree(self.tree, self.cost)
         return
 
 
@@ -45,13 +46,14 @@ class Collect(Move):
     cost: int = COLLECT_LP_COST
 
     def execute(self):
-        self.board.plant_tree(self.tree)
+        self.board.collect_tree(self.tree, self.cost)
         return self.board
 
 
 @dataclass
 class EndGo(Move):
-    cost: int = 0
+    player_number: int
 
     def execute(self):
+        self.board.end_go(self.player_number)
         return self.board
