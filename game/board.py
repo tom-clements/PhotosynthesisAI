@@ -144,6 +144,7 @@ class Board:
         to_tree.tile = tile
         from_tree.tile = None
         tile.tree = to_tree
+        tile.is_locked = True
         player = [player for player in self.players if player.number == tile.tree.owner][0]
         player.l_points -= cost
 
@@ -158,6 +159,7 @@ class Board:
         tree.tile = tile
         self.data[tile.index].tree = tree
         tree.tile = tile
+        tile.is_locked = True
         player = [player for player in self.players if player.number == tile.tree.owner][0]
         player.l_points -= cost
 
@@ -169,6 +171,8 @@ class Board:
         tile = tree.tile
         tile.tree = None
         tree.tile = None
+        tree.bought = False
+        tile.is_locked = True
         player = [player for player in self.players if player.number == tree.owner][0]
         player.l_points -= cost
         player.score += 5

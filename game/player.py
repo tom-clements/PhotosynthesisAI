@@ -9,7 +9,7 @@ class Player:
         self.number = number
         self.l_points = 0
         self.score = 0
-        self.go_active = False
+        self.go_active = True
 
     def starting_moves(self, board):
         free_tiles = [tile for tile in board.data if (3 in abs(tile.coords)) & (not tile.tree)]
@@ -72,8 +72,9 @@ class Player:
         return moves
 
     
-    def get_buying_moves(self, board, trees_in_shop):
-        moves = [Buy(board=board, tree=tree, cost=tree.cost) for tree in trees_in_shop if tree.cost <= self.l_points]
+    def get_buying_moves(self, board, trees_bought, trees_in_shop):
+        bought_tree_sizes = list(set([tree.size for tree in trees_bought]))
+        moves = [Buy(board=board, tree=tree, cost=tree.cost) for tree in trees_in_shop if (tree.cost <= self.l_points) & (tree.size not in bought_tree_sizes)]
         return moves
 
     def moves_available(self, board):
@@ -84,8 +85,8 @@ class Player:
         planting_moves = self.get_planting_moves(board, trees_on_board, trees_bought)
         growing_moves = self.get_growing_moves(board, trees_on_board, trees_bought)
         collecting_moves = self.get_collecting_moves(board, trees_on_board)
-        buying_moves = self.get_buying_moves(board, trees_in_shop)
+        buying_moves = self.get_buying_moves(board, trees_bought, trees_in_shop)
         return planting_moves + growing_moves + collecting_moves + buying_moves + [EndGo(board=board, player_number=self.number)]
-
+    
     def move(self, move):
         move.execute()
