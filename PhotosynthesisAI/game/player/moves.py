@@ -1,13 +1,12 @@
 from dataclasses import dataclass
-from .board import Board
-from .tree import Tree
-from .tile import Tile
-from .constants import PLANT_LP_COST, COLLECT_LP_COST
+from ..components import Tree, Tile
+from PhotosynthesisAI.game.utils.constants import PLANT_LP_COST, COLLECT_LP_COST
 
 
 @dataclass
 class Move:
-    board: Board
+    board: 'Board'
+
 
 @dataclass
 class Grow(Move):
@@ -18,6 +17,7 @@ class Grow(Move):
     def execute(self):
         self.board.grow_tree(self.from_tree, self.to_tree, self.cost)
         return self.board
+
 
 @dataclass
 class Plant(Move):

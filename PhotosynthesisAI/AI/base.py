@@ -2,7 +2,6 @@ from PhotosynthesisAI.game.player import Player
 
 
 class BaseAI(Player):
-
     def play_turn(self, board):
         while self.go_active:
             moves = self.starting_moves(board) if board.round_number == 0 else self.moves_available(board)
