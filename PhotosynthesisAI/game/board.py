@@ -1,11 +1,15 @@
 import hexy as hx
 import numpy as np
 import matplotlib.pyplot as plt
+from collections import namedtuple
 from matplotlib.patches import RegularPolygon
-from .constants import *
+from .constants import BOARD_RADIUS, MAX_SUN_ROTATIONS, TOKENS, TREES
 from .tree import Tree
 from .tile import Tile
+from .token import Token
+from .utils import find_array_in_2D_array
 from typing import List, Union
+
 
 
 class Board:
@@ -23,23 +27,26 @@ class Board:
     ])
 
     def __init__(self, players):
-        self.players=players
-        self.trees = []
+        trees = []
         for i, p in enumerate(range(len(players))):
             for tree_type in TREES.keys():
                 tree = TREES[tree_type]
-                self.trees += [
+                trees += [
                     Tree(owner=i + 1, size=tree['size'], bought=True, tree_type=tree_type, score=tree['score']) for j in
-                    range(tree['starting'])]
-                self.trees += [Tree(owner=i + 1, size=tree['size'], bought=False, cost=cost, tree_type=tree_type,
+                    range(tree['starting'])] 
+                trees += [Tree(owner=i + 1, size=tree['size'], bought=False, cost=cost, tree_type=tree_type,
                                     score=tree['score']) for
                                j, cost in enumerate(tree['cost'])]
-        self.trees = np.array(self.trees)
-        self.round_number = 1
+        self.round_number = 0
         self.pg_active = False
         self.sun_position = 5
-        self.data = [Tile(tree=None, coords=coord, index=self.get_tile_index(coord)) for i, coord in
-                     enumerate(self.tile_coords)]
+        Data = namedtuple('data', 'tiles trees players tokens')
+        self.data = Data(
+            tiles=[Tile(tree=None, coords=coord, index=self.get_tile_index(coord)) for i, coord in enumerate(self.tile_coords)],
+            trees=np.array(trees),
+            players=players,
+            tokens=[Token(richness=key, value=value) for key in TOKENS for value in TOKENS[key]]
+        )
         
     #########
     # UTILS #
@@ -51,7 +58,7 @@ class Board:
         return np.array(self.data)[mask][0]
 
     def is_game_over(self):
-        return self.round_number == (MAX_SUN_ROTATIONS * 6)
+        return self.round_number == (MAX_SUN_ROTATIONS * 6) +1
 
     
     
@@ -76,15 +83,27 @@ class Board:
     # ROUND CALCULATIONS #
     ######################
     
-    def start_round(self):
+    def end_round(self):
+        for player in self.data.players:
+            player.go_active = True
         self.rotate_sun()
         self._set_shadows()
         for tile in self.data:
             tile.is_locked = False
             if (not tile.is_shadow) & (tile.tree is not None):
-                player = [player for player in self.players if player.number == tile.tree.owner][0]
+                player = [player for player in self.data.players if player.number == tile.tree.owner][0]
                 player.l_points += tile.tree.score
 
+    def get_player_order(self):
+        num_players = len(self.data.players)
+        first_player_number = self.round_number % num_players
+        order = [1+ ((self.round_number + i) % num_players) for i in range(num_players)]
+        
+        player_order = []
+        for i in order:
+            player_order.append([player for player in self.data.players if player.number == i][0])
+        return player_order
+    
     def rotate_sun(self):
         self.sun_position = (self.sun_position + 1) % 6
         self.round_number += 1
@@ -128,6 +147,9 @@ class Board:
     # MOVE EXECUTION #
     ##################
     
+    def get_next_token(self, richness: int) -> Token:
+        token = []
+    
     def grow_tree(self, from_tree: Tree, to_tree: Tree, cost:int):
         # should wrap these into unit tests
         if not from_tree.tile:
@@ -145,7 +167,7 @@ class Board:
         from_tree.tile = None
         tile.tree = to_tree
         tile.is_locked = True
-        player = [player for player in self.players if player.number == tile.tree.owner][0]
+        player = [player for player in self.data.players if player.number == tile.tree.owner][0]
         player.l_points -= cost
 
     def plant_tree(self, tile: Tile, tree: Tree, cost: int):
@@ -160,7 +182,7 @@ class Board:
         self.data[tile.index].tree = tree
         tree.tile = tile
         tile.is_locked = True
-        player = [player for player in self.players if player.number == tile.tree.owner][0]
+        player = [player for player in self.data.players if player.number == tile.tree.owner][0]
         player.l_points -= cost
 
     def collect_tree(self, tree: Tree, cost: int):
@@ -173,7 +195,7 @@ class Board:
         tree.tile = None
         tree.bought = False
         tile.is_locked = True
-        player = [player for player in self.players if player.number == tree.owner][0]
+        player = [player for player in self.data.players if player.number == tree.owner][0]
         player.l_points -= cost
         player.score += 5
         
@@ -181,11 +203,11 @@ class Board:
         if tree.bought:
             raise ValueError("The tree has already been bought")
         tree.bought = True
-        player = [player for player in self.players if player.number == tree.owner][0]
+        player = [player for player in self.data.players if player.number == tree.owner][0]
         player.l_points -= cost
     
     def end_go(self, player_number):
-        player = [player for player in self.players if player.number == player_number][0]
+        player = [player for player in self.data.players if player.number == player_number][0]
         player.go_active = False
         return True
         
@@ -219,13 +241,14 @@ class Board:
         sun_y_coord = 2 * np.sin(np.radians(60)) * (sun_coords[1] - sun_coords[2]) / 3
         ax.text(sun_coords[0], sun_y_coord, 'SUN', ha='center', va='center', size=20, color='orange')
         
-        for player in self.players:
+        for player in self.data.players:
             ax.text(7, 2-player.number, f'Player {player.number}: Light Points: {player.l_points}, score: {player.score}', ha='center', va='center', size=20, color='black')
         
+        ax.text(7, 4, f'Round number {self.round_number}', ha='center', va='center', size=20, color='black')        
         
         # Add scatter points in hexagon centres
         ax.scatter(hcoord, vcoord, c=shadows, alpha=0.5)
         plt.axis('off')
         plt.show()
         
-    ##################
+    ###################

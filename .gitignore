@@ -2,5 +2,10 @@ __pycache__
 *.pyc
 .idea
 .idea/
-.ipynb_checkpoints/
+PhotosynthesisAI/.ipynb_checkpoints/
+PhotosynthesisAI/notebooks/
 notebooks/
+.ipynb_checkpoints/
+*.egg
+*.egg-info/
+*.ipynb

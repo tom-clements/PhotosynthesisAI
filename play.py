@@ -1,5 +1,5 @@
-from game.board import Board
-from game.player import Player
+from PhotosynthesisAI.game import Board
+from PhotosynthesisAI.game import Player
 
 if __name__ == '__main__':
     board = Board(2)

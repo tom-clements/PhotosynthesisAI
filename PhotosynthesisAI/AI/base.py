@@ -1,4 +1,4 @@
-from ..game.player import Player
+from PhotosynthesisAI.game.player import Player
 
 
 class BaseAI(Player):
