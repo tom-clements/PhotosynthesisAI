@@ -1,7 +1,9 @@
 class Tree:
     max_size = 3
 
-    def __init__(self, owner: int, size: int, is_bought: bool, tree_type: str, score: int, tile: 'Tile' = None, cost: int = None):
+    def __init__(
+        self, owner: int, size: int, is_bought: bool, tree_type: str, score: int, tile: "Tile" = None, cost: int = None
+    ):
         self.owner = owner
         self.size = size
         self.shadow = size

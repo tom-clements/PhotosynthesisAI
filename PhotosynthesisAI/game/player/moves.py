@@ -1,11 +1,11 @@
 from dataclasses import dataclass
-from ..components import Tree, Tile
+from PhotosynthesisAI.game.components import Tree, Tile
 from PhotosynthesisAI.game.utils.constants import PLANT_LP_COST, COLLECT_LP_COST
 
 
 @dataclass
 class Move:
-    board: 'Board'
+    board: "Board"
 
 
 @dataclass

@@ -3,11 +3,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from collections import namedtuple
 from matplotlib.patches import RegularPolygon
-from PhotosynthesisAI.game.utils.constants import BOARD_RADIUS, MAX_SUN_ROTATIONS, TOKENS, TREES
+from PhotosynthesisAI.game.utils.constants import BOARD_RADIUS, TOKENS, TREES
 from PhotosynthesisAI.game.components import Tile, Tree, Token
 from PhotosynthesisAI.game.utils.utils import find_array_in_2D_array
 from PhotosynthesisAI.game.player import Player
-from typing import List, Union
+from typing import List, Union, Dict
 
 
 class Board:
@@ -65,12 +65,10 @@ class Board:
     #########
 
     def _get_tile_from_coords(self, coords) -> Tile:
-        # can maybe cache this calcualion, although it is quite quick
+        # can maybe cache this calculalion, although it is quite quick
         mask = find_array_in_2D_array(coords, self.tile_coords)
         return np.array(self.data.tiles)[mask][0]
 
-    def is_game_over(self):
-        return self.round_number == (MAX_SUN_ROTATIONS * 6) + 1
 
     def get_surrounding_tiles(self, tile: Tile, radius: int) -> List[Tile]:
         surrounding_tile_coords = tile.get_surrounding_coords(radius)
@@ -107,15 +105,6 @@ class Board:
                 player = [player for player in self.data.players if player.number == tile.tree.owner][0]
                 player.l_points += tile.tree.score
 
-    def get_player_order(self) -> List[Player]:
-        num_players = len(self.data.players)
-        first_player_number = self.round_number % num_players
-        order = [1 + ((self.round_number + i) % num_players) for i in range(num_players)]
-
-        player_order = []
-        for i in order:
-            player_order.append([player for player in self.data.players if player.number == i][0])
-        return player_order
 
     def rotate_sun(self):
         self.sun_position = (self.sun_position + 1) % 6
@@ -171,7 +160,7 @@ class Board:
             if tokens:
                 return tokens[0]
             richness -= 1
-        raise ValueError('Ran out of tokens')
+        raise ValueError("Ran out of tokens")
 
     def grow_tree(self, from_tree: Tree, to_tree: Tree, cost: int):
         # should wrap these into unit tests
@@ -253,7 +242,7 @@ class Board:
         fig, ax = plt.subplots(1)
         fig.set_size_inches(12.5, 8.5)
         plt.axis([-5, 10, -5, 5])
-        ax.set_aspect('equal')
+        ax.set_aspect("equal")
         # Add some coloured hexagons
         for x, y, c, l in zip(hcoord, vcoord, colors, labels):
             hexagon = RegularPolygon(
@@ -275,7 +264,7 @@ class Board:
         for player in self.data.players:
             ax.text(
                 7,
-                2 - player.number/2,
+                2 - player.number / 2,
                 f"Player {player.number}: Light Points: {player.l_points}, score: {player.score}",
                 ha="center",
                 va="center",

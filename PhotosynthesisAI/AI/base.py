@@ -1,3 +1,8 @@
+from abc import abstractmethod
+from typing import List
+
+from PhotosynthesisAI.game.components import Board
+from PhotosynthesisAI.game.player.moves import Move
 from PhotosynthesisAI.game.player import Player
 
 
@@ -9,4 +14,7 @@ class BaseAI(Player):
             self.move(move)
             if board.round_number == 0:
                 break
-        return
+
+    @abstractmethod
+    def pick_move(self, board: Board, availablle_moves: List[Move]) -> Move:
+        pass
