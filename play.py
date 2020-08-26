@@ -1,9 +1,9 @@
-from PhotosynthesisAI.game import Board
-from PhotosynthesisAI.AI import RandomAI
-from PhotosynthesisAI import Game
+from PhotosynthesisAI.AI import RandomAI, ExpertSystemAI, ExpertSystemAI2
+from PhotosynthesisAI.game import Series
 
 if __name__ == "__main__":
-    players = [RandomAI(1), RandomAI(2)]
-    game = Game(players)
-    game.play()
-    game.show()
+    players = [ExpertSystemAI(1), RandomAI(2)]
+    series = Series(players=players, num_matches=200)
+    series.play()
+    series.display_results()
+
