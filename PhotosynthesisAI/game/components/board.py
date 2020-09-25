@@ -64,6 +64,9 @@ class Board:
     # UTILS #
     #########
 
+    # def get_state(self) -> Dict:
+    #     board =
+
     def _get_tile_from_coords(self, coords) -> Tile:
         # can maybe cache this calculalion, although it is quite quick
         mask = find_array_in_2D_array(coords, self.tile_coords)
@@ -95,6 +98,10 @@ class Board:
     ######################
 
     def end_round(self):
+        if self.round_number == 0:
+            self._set_shadows()
+            self.round_number += 1
+            return
         for player in self.data.players:
             player.go_active = True
         self.rotate_sun()
@@ -205,8 +212,20 @@ class Board:
         tile = tree.tile
         tile.tree = None
         tree.tile = None
-        tree.is_bought = False
+
         tile.is_locked = True
+
+        # put tree back in store
+        num_trees_of_type_in_store = len([board_tree
+                                  for board_tree in self.data.trees
+                                  if (tree.size == board_tree.size)
+                                  & (not board_tree.is_bought)
+                                  & (board_tree.owner == tree.owner)
+                                  ])
+        tree_cost = TREES[tree.tree_type]['cost'][num_trees_of_type_in_store]
+        tree.cost = tree_cost
+        tree.is_bought = False
+
         player = [player for player in self.data.players if player.number == tree.owner][0]
         player.l_points -= cost
         token = self.get_next_token(tile.richness)
@@ -219,6 +238,7 @@ class Board:
         tree.is_bought = True
         player = [player for player in self.data.players if player.number == tree.owner][0]
         player.l_points -= cost
+        tree.cost = 0
 
     def end_go(self, player_number):
         player = [player for player in self.data.players if player.number == player_number][0]

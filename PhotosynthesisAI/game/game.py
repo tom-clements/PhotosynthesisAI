@@ -43,6 +43,9 @@ class Game:
             player_order = self.players
             random.shuffle(player_order)
             self.player_order = player_order
+        # don't rotate until round 2 after 2 initial
+        elif self.board.round_number == 1:
+            return
         else:
             self.player_order = self.player_order[1:] + [self.player_order[0]]
 
@@ -60,4 +63,3 @@ class Game:
 
         else:
             raise ValueError('The game has not finished!')
-
