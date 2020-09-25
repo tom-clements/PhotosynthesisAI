@@ -43,14 +43,14 @@ class Game:
             player_order = self.players
             random.shuffle(player_order)
             self.player_order = player_order
-        # don't rotate until round 2 after 2 initial
-        elif self.board.round_number == 1:
+        # don't rotate until round 2 after 2 initial and first normal round
+        elif self.board.round_number in [1, 2]:
             return
         else:
             self.player_order = self.player_order[1:] + [self.player_order[0]]
 
     def is_game_over(self):
-        return self.board.round_number == (MAX_SUN_ROTATIONS * 6) + 1
+        return self.board.round_number == (MAX_SUN_ROTATIONS * 6) + 2
 
     def get_score(self) -> Dict[Player, int]:
         return {player: player.score for player in self.board.data.players}
