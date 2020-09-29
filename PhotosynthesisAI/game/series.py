@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from PhotosynthesisAI.game.player import Player
 from PhotosynthesisAI.game import Game
-
+from PhotosynthesisAI.game.utils.utils import FUNCTION_TIMINGS
 
 logger = logging.getLogger("Game")
 logging.basicConfig(level=logging.INFO)
@@ -16,17 +16,19 @@ LOSE_POINTS = 0
 
 
 class Series:
-    def __init__(self, players: List[Player], num_matches: int, verbose: bool = True):
+    def __init__(self, players: List[Player], num_matches: int):
         self.players = players
         self.num_matches = num_matches
-        self.verbose = verbose
         self.match_scores = {p.number: [] for p in players}
+        self.game_states = []
+        self.len_states = [0]
+        self.len_duplicate_states = []
 
-    def play(self):
+    def play(self, verbose: bool = True):
         for match_number in range(self.num_matches):
-            logger.info(f"playing match mumber {match_number}")
+            # logger.info(f"playing match mumber {match_number}")
             game = Game(self.players)
-            game.play()
+            game.play(verbose=verbose)
             winners = game.get_winner()
             winner_numbers = [player.number for player in winners]
             losers = [
@@ -38,6 +40,20 @@ class Series:
                 self.match_scores[winner.number].append(WIN_POINTS)
             for loser in losers:
                 self.match_scores[loser.number].append(LOSE_POINTS)
+            self.game = game
+            self.game_states += game.states
+            # if match_number % 10 == 0:
+            #     num_states = len(self.game_states)
+            #     self.game_states = list(set(self.game_states))
+            #     self.len_duplicate_states.append(num_states - len(self.game_states))
+            #     self.len_states.append(len(self.game_states))
+            #     if match_number != 0:
+            #         states_per_match_added = (self.len_states[-1] - self.len_states[-2])/10
+            #         logger.info(f"Match: {match_number}, "
+            #                     f"Num unique states: {self.len_states[-1]}, "
+            #                     f"Num duplicate states seen: {sum(self.len_duplicate_states[-1:])}, "
+            #                     f"States per match added:{states_per_match_added}")
+
 
     def display_results(self):
         results_df = pd.DataFrame(self.match_scores)
@@ -48,4 +64,5 @@ class Series:
         results_df[plotting_columns].plot()
         plt.show()
 
-
+    def get_function_time_metrics(self):
+        return pd.DataFrame(FUNCTION_TIMINGS).T

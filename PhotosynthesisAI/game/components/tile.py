@@ -4,6 +4,7 @@ import hexy as hx
 import numpy as np
 from .tree import Tree
 from PhotosynthesisAI.game.utils.constants import RICHNESS
+from ..utils.utils import time_function
 
 
 class Tile:
@@ -20,6 +21,7 @@ class Tile:
     def get_adjacent_tile(self, axis: np.ndarray) -> np.ndarray:
         return self.coords + axis
 
+    @time_function
     def get_surrounding_coords(self, radius: int) -> np.ndarray:
         surrounding_tile_coords = hx.get_disk(self.coords, radius)
         return surrounding_tile_coords

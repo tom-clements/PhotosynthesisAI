@@ -1,3 +1,5 @@
+from functools import lru_cache
+
 import hexy as hx
 import numpy as np
 import matplotlib.pyplot as plt
@@ -5,9 +7,9 @@ from collections import namedtuple
 from matplotlib.patches import RegularPolygon
 from PhotosynthesisAI.game.utils.constants import BOARD_RADIUS, TOKENS, TREES
 from PhotosynthesisAI.game.components import Tile, Tree, Token
-from PhotosynthesisAI.game.utils.utils import find_array_in_2D_array
+from PhotosynthesisAI.game.utils.utils import find_array_in_2D_array, time_function
 from PhotosynthesisAI.game.player import Player
-from typing import List, Union, Dict
+from typing import List, Union, Dict, Tuple
 
 
 class Board:
@@ -26,6 +28,7 @@ class Board:
         ]
     )
 
+    @time_function
     def __init__(self, players: List[Player]):
         trees = []
         for i, p in enumerate(players):
@@ -64,30 +67,33 @@ class Board:
     # UTILS #
     #########
 
-    # def get_state(self) -> Dict:
-    #     board =
-
-    def _get_tile_from_coords(self, coords) -> Tile:
+    @lru_cache(maxsize=None)
+    @time_function
+    def _get_tile_from_coords(self, coords: Tuple) -> Tile:
         # can maybe cache this calculalion, although it is quite quick
-        mask = find_array_in_2D_array(coords, self.tile_coords)
+        mask = find_array_in_2D_array(np.array(coords), self.tile_coords)
         return np.array(self.data.tiles)[mask][0]
 
-
-    def get_surrounding_tiles(self, tile: Tile, radius: int) -> List[Tile]:
+    @lru_cache(maxsize=None)
+    @time_function
+    def get_surrounding_tiles(self, tile: Tile, radius: int) -> Tuple[Tile]:
         surrounding_tile_coords = tile.get_surrounding_coords(radius)
+
         # subset to tiles in board and exclude the tile itself
-        tiles = [
-            t
-            for t in self.data.tiles
-            if any(find_array_in_2D_array(t.coords, surrounding_tile_coords)) & (not all(t.coords == tile.coords))
+        surrounding_tile_coords = [
+            self._get_tile_from_coords(tuple(coord))
+            for coord in surrounding_tile_coords
+            if (max(np.absolute(coord)) <= BOARD_RADIUS) & (not all(coord == tile.coords))
         ]
-        return tiles
+        return tuple(surrounding_tile_coords)
 
     @classmethod
+    @time_function
     def get_tile_index(cls, coord):
         mask = find_array_in_2D_array(coord, cls.tile_coords)
         return int(np.where(mask)[0])
 
+    @time_function
     def get_empty_unlocked_tiles(self) -> List[Tile]:
         return [tile for tile in self.data.tiles if (not tile.tree) & (not tile.is_locked)]
 
@@ -97,8 +103,9 @@ class Board:
     # ROUND CALCULATIONS #
     ######################
 
+    @time_function
     def end_round(self):
-        if self.round_number == 0:
+        if self.round_number in [0, 1]:
             self._set_shadows()
             self.round_number += 1
             return
@@ -113,11 +120,13 @@ class Board:
                 player.l_points += tile.tree.score
 
 
+    @time_function
     def rotate_sun(self):
         self.sun_position = (self.sun_position + 1) % 6
         self.round_number += 1
         return
 
+    @time_function
     def _get_tiles_at_sun_edge(self) -> List[Tile]:
         sun = self.suns[self.sun_position]
         mask = (
@@ -127,19 +136,31 @@ class Board:
             > 0
         )
         edge_coords = self.tile_coords[mask]
-        tiles = [self._get_tile_from_coords(coords) for coords in edge_coords]
+        tiles = [self._get_tile_from_coords(tuple(coords)) for coords in edge_coords]
         return tiles
 
-    def _get_tiles_along_same_axis(self, start_tile: Tile, axis: Union[List, np.ndarray]) -> List[Tile]:
-        coords = start_tile.coords
+    @lru_cache(maxsize=None)
+    @time_function
+    def _get_coords_along_same_axis(self, coords: Tuple[int], axis: Tuple[int]) -> Tuple[Tuple[int]]:
         tiles = []
+        coords = np.array(coords)
         while max(abs(coords)) <= BOARD_RADIUS:
-            tiles.append(self._get_tile_from_coords(coords))
+            tiles.append(tuple(coords))
             coords = coords - axis
-        return tiles
+        return tuple(tiles)
 
+    @lru_cache(maxsize=None)
+    @time_function
+    def _get_tiles_along_same_axis(self, start_tile: Tile, axis: Tuple[int]) -> Tuple[Tile]:
+        tiles = [
+            self._get_tile_from_coords(coords)
+            for coords in self._get_coords_along_same_axis(tuple(start_tile.coords), axis)
+        ]
+        return tuple(tiles)
+
+    @time_function
     def _set_shadows_along_axis(self, tile: Tile, axis: np.ndarray):
-        axis_tiles = self._get_tiles_along_same_axis(tile, axis)
+        axis_tiles = self._get_tiles_along_same_axis(tile, tuple(axis))
         current_shadow_size = 0
         for axis_tile in axis_tiles:
             axis_tile.is_shadow = True if current_shadow_size > 0 else False
@@ -148,6 +169,7 @@ class Board:
                 continue
             current_shadow_size = max([axis_tile.tree.shadow, current_shadow_size])
 
+    @time_function
     def _set_shadows(self):
         sun = self.suns[self.sun_position]
         edge_tiles = self._get_tiles_at_sun_edge()
@@ -160,6 +182,7 @@ class Board:
     # MOVE EXECUTION #
     ##################
 
+    @time_function
     def get_next_token(self, richness: int) -> Token:
         # get the first token
         while richness > 0:
@@ -169,6 +192,7 @@ class Board:
             richness -= 1
         raise ValueError("Ran out of tokens")
 
+    @time_function
     def grow_tree(self, from_tree: Tree, to_tree: Tree, cost: int):
         # should wrap these into unit tests
         if not from_tree.tile:
@@ -189,6 +213,7 @@ class Board:
         player = [player for player in self.data.players if player.number == tile.tree.owner][0]
         player.l_points -= cost
 
+    @time_function
     def plant_tree(self, tile: Tile, tree: Tree, cost: int):
         if tile.tree:
             raise ValueError("There is already a tree here")
@@ -204,6 +229,7 @@ class Board:
         player = [player for player in self.data.players if player.number == tile.tree.owner][0]
         player.l_points -= cost
 
+    @time_function
     def collect_tree(self, tree: Tree, cost: int):
         if not tree.tile:
             raise ValueError("This tree isn't on the board")
@@ -232,6 +258,7 @@ class Board:
         token.owner = tree.owner
         player.score += token.value
 
+    @time_function
     def buy_tree(self, tree: Tree, cost: int):
         if tree.is_bought:
             raise ValueError("The tree has already been bought")
@@ -240,6 +267,7 @@ class Board:
         player.l_points -= cost
         tree.cost = 0
 
+    @time_function
     def end_go(self, player_number):
         player = [player for player in self.data.players if player.number == player_number][0]
         player.go_active = False

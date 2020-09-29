@@ -3,6 +3,7 @@ from PhotosynthesisAI.game.utils.constants import TREES, PLANT_LP_COST, COLLECT_
 from .moves import Plant, Grow, Collect, Buy, EndGo
 from ..components.tree import Tree
 from .moves import Move
+from ..utils.utils import time_function
 
 
 class Player:
@@ -12,11 +13,15 @@ class Player:
         self.score = 0
         self.go_active = True
 
+    @time_function
     def starting_moves(self, board: "Board") -> List[Plant]:
         free_tiles = [tile for tile in board.data.tiles if (3 in abs(tile.coords)) & (not tile.tree)]
-        starting_tree = [tree for tree in board.data.trees if (tree.owner == self.number) & (tree.size == 1)][0]
+        starting_tree = [tree
+                         for tree in board.data.trees
+                         if (tree.owner == self.number) & (tree.size == 1) & tree.is_bought & (tree.tile is None)][0]
         return [Plant(board=board, tile=tile, tree=starting_tree, cost=0) for tile in free_tiles]
 
+    @time_function
     def get_planting_moves(self, board: "Board", trees_on_board: List[Tree], trees_bought: List[Tree]) -> List[Plant]:
         # check is can afford to plant
         if self.l_points < PLANT_LP_COST:
@@ -40,6 +45,7 @@ class Player:
         moves = [Plant(board=board, tile=tile, tree=seeds[0]) for tile in surrounding_tiles]
         return moves
 
+    @time_function
     def get_growing_moves(self, board: "Board", trees_on_board: List[Tree], trees_bought: List[Tree]) -> List[Grow]:
         if self.l_points == 0:
             return []
@@ -71,6 +77,7 @@ class Player:
                     break
         return moves
 
+    @time_function
     def get_collecting_moves(self, board: "Board", trees_on_board: List[Tree]) -> List[Collect]:
         if self.l_points < COLLECT_LP_COST:
             return []
@@ -78,6 +85,7 @@ class Player:
         moves = [Collect(board=board, tree=tree) for tree in trees_to_collect]
         return moves
 
+    @time_function
     def get_buying_moves(self, board: "Board", trees_bought: List[Tree], trees_in_shop: List[Tree]) -> List[Buy]:
         bought_tree_sizes = list(set([tree.size for tree in trees_bought]))
         moves = [
@@ -87,6 +95,7 @@ class Player:
         ]
         return moves
 
+    @time_function
     def moves_available(self, board: "Board") -> List[Move]:
         trees_bought = [
             tree for tree in board.data.trees if (tree.owner == self.number) & (not tree.tile) & tree.is_bought
@@ -107,6 +116,7 @@ class Player:
             + [EndGo(board=board, player_number=self.number)]
         )
 
+    @time_function
     def move(self, move):
         move.execute()
 
