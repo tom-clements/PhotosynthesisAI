@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import List
 from PhotosynthesisAI.game.utils.constants import TREES, PLANT_LP_COST, COLLECT_LP_COST
 from .moves import Plant, Grow, Collect, Buy, EndGo
@@ -99,13 +100,9 @@ class Player:
 
     @time_function
     def moves_available(self, board: "Board") -> List[Move]:
-        trees_bought = [
-            tree for tree in board.data.trees if (tree.owner == self.number) & (not tree.tile) & tree.is_bought
-        ]
-        trees_in_shop = [
-            tree for tree in board.data.trees if (tree.owner == self.number) & (not tree.tile) & (not tree.is_bought)
-        ]
-        trees_on_board = [tree for tree in board.data.trees if (tree.owner == self.number) & (tree.tile is not None)]
+        trees_bought = list(board.tree_of_trees[self.number]["bought"].values())
+        trees_on_board = list(board.tree_of_trees[self.number]["on_board"].values())
+        trees_in_shop = list(board.tree_of_trees[self.number]["in_shop"].values())
         planting_moves = self.get_planting_moves(board, trees_on_board, trees_bought)
         growing_moves = self.get_growing_moves(board, trees_on_board, trees_bought)
         collecting_moves = self.get_collecting_moves(board, trees_on_board)

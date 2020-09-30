@@ -1,3 +1,4 @@
+from copy import deepcopy
 from functools import lru_cache
 
 import hexy as hx
@@ -7,14 +8,14 @@ from collections import namedtuple
 from matplotlib.patches import RegularPolygon
 from PhotosynthesisAI.game.utils.constants import BOARD_RADIUS, TOKENS, TREES
 from PhotosynthesisAI.game.components import Tile, Tree, Token
-from PhotosynthesisAI.game.utils.hex_tools import _get_coords_at_sun_edge, _get_coords_along_same_axis, \
-    _get_surrounding_coords
+from PhotosynthesisAI.game.utils.hex_tools import (
+    _get_coords_at_sun_edge,
+    _get_coords_along_same_axis,
+    _get_surrounding_coords,
+)
 from PhotosynthesisAI.game.utils.utils import find_array_in_2D_array, time_function
 from PhotosynthesisAI.game.player import Player
-from typing import List, Union, Dict, Tuple
-
-
-
+from typing import List, Tuple
 
 
 class Board:
@@ -36,15 +37,26 @@ class Board:
     @time_function
     def __init__(self, players: List[Player]):
         trees = []
+        tree_count = 0
         for i, p in enumerate(players):
             for tree_type in TREES.keys():
+                tree_count = len(trees)
                 tree = TREES[tree_type]
                 trees += [
-                    Tree(owner=i + 1, size=tree["size"], is_bought=True, tree_type=tree_type, score=tree["score"])
+                    Tree(
+                        id=tree_count + j,
+                        owner=i + 1,
+                        size=tree["size"],
+                        is_bought=True,
+                        tree_type=tree_type,
+                        score=tree["score"],
+                    )
                     for j in range(tree["starting"])
                 ]
+                tree_count = len(trees)
                 trees += [
                     Tree(
+                        id=tree_count + j,
                         owner=i + 1,
                         size=tree["size"],
                         is_bought=False,
@@ -68,9 +80,33 @@ class Board:
             tokens=[Token(richness=key, value=value) for key in TOKENS for value in TOKENS[key]],
         )
 
+        self.tuple_tile_coords = tuple([tuple(coord) for coord in self.tile_coords])
+
+        # index these separately so don't need to calculate many times
+        self.tree_of_trees = {
+            player.number: {
+                "bought": {
+                    tree.id: tree for tree in trees if (tree.owner == player.number) & (not tree.tile) & tree.is_bought
+                },
+                "in_shop": {
+                    tree.id: tree
+                    for tree in trees
+                    if (tree.owner == player.number) & (not tree.tile) & (not tree.is_bought)
+                },
+                "on_board": {
+                    tree.id: tree for tree in trees if (tree.owner == player.number) & (tree.tile is not None)
+                },
+            }
+            for player in players
+        }
+
     #########
     # UTILS #
     #########
+
+    # Caching here may cause memory leaks if lots of games played -> care.
+    # This is because the Tile object is not that unique as it contains trees.
+    # Could refactor to remove trees here.
 
     @classmethod
     @lru_cache(maxsize=None)
@@ -85,8 +121,7 @@ class Board:
     def get_surrounding_tiles(self, tile: Tile, radius: int) -> Tuple[Tile]:
         surrounding_tile_coords = _get_surrounding_coords(tuple(tile.coords), radius, BOARD_RADIUS)
         surrounding_tiles = [
-            self.data.tiles[self._get_tile_index_from_coords(tuple(coord))]
-            for coord in surrounding_tile_coords
+            self.data.tiles[self._get_tile_index_from_coords(tuple(coord))] for coord in surrounding_tile_coords
         ]
         return tuple(surrounding_tiles)
 
@@ -104,12 +139,8 @@ class Board:
     @lru_cache(maxsize=None)
     @time_function
     def _get_tiles_at_sun_edge(self, sun: Tuple) -> List[Tile]:
-        board_coords = tuple([tuple(coord) for coord in self.tile_coords])
-        edge_coords = _get_coords_at_sun_edge(tuple(sun), board_coords)
-        tiles = [
-            self.data.tiles[self._get_tile_index_from_coords(tuple(coords))]
-            for coords in edge_coords
-        ]
+        edge_coords = _get_coords_at_sun_edge(tuple(sun), self.tuple_tile_coords)
+        tiles = [self.data.tiles[self._get_tile_index_from_coords(tuple(coords))] for coords in edge_coords]
         return tiles
 
     @lru_cache(maxsize=None)
@@ -140,7 +171,6 @@ class Board:
             if (not tile.is_shadow) & (tile.tree is not None):
                 player = [player for player in self.data.players if player.number == tile.tree.owner][0]
                 player.l_points += tile.tree.score
-
 
     @time_function
     def rotate_sun(self):
@@ -201,6 +231,28 @@ class Board:
         player = [player for player in self.data.players if player.number == tile.tree.owner][0]
         player.l_points -= cost
 
+        # -put back in shop
+        num_trees_of_type_in_store = len(
+            [
+                board_tree
+                for board_tree in self.data.trees
+                if (from_tree.size == board_tree.size)
+                & (not board_tree.is_bought)
+                & (board_tree.owner == from_tree.owner)
+            ]
+        )
+        # if shop is full remove tree from game
+        if num_trees_of_type_in_store >= len(TREES[from_tree.tree_type]["cost"]):
+            from_tree.is_deleted = True
+        else:
+            tree_cost = TREES[from_tree.tree_type]["cost"][num_trees_of_type_in_store]
+            from_tree.cost = tree_cost
+            from_tree.is_bought = False
+            self.tree_of_trees[player.number]["in_shop"].update({from_tree.id: from_tree})
+        self.tree_of_trees[player.number]["on_board"].update({to_tree.id: to_tree})
+        self.tree_of_trees[player.number]["on_board"].pop(from_tree.id)
+        self.tree_of_trees[player.number]["bought"].pop(to_tree.id)
+
     @time_function
     def plant_tree(self, tile: Tile, tree: Tree, cost: int):
         if tile.tree:
@@ -216,6 +268,8 @@ class Board:
         tile.is_locked = True
         player = [player for player in self.data.players if player.number == tile.tree.owner][0]
         player.l_points -= cost
+        self.tree_of_trees[player.number]["on_board"].update({tree.id: tree})
+        self.tree_of_trees[player.number]["bought"].pop(tree.id)
 
     @time_function
     def collect_tree(self, tree: Tree, cost: int):
@@ -230,13 +284,14 @@ class Board:
         tile.is_locked = True
 
         # put tree back in store
-        num_trees_of_type_in_store = len([board_tree
-                                  for board_tree in self.data.trees
-                                  if (tree.size == board_tree.size)
-                                  & (not board_tree.is_bought)
-                                  & (board_tree.owner == tree.owner)
-                                  ])
-        tree_cost = TREES[tree.tree_type]['cost'][num_trees_of_type_in_store]
+        num_trees_of_type_in_store = len(
+            [
+                board_tree
+                for board_tree in self.data.trees
+                if (tree.size == board_tree.size) & (not board_tree.is_bought) & (board_tree.owner == tree.owner)
+            ]
+        )
+        tree_cost = TREES[tree.tree_type]["cost"][num_trees_of_type_in_store]
         tree.cost = tree_cost
         tree.is_bought = False
 
@@ -245,6 +300,8 @@ class Board:
         token = self.get_next_token(tile.richness)
         token.owner = tree.owner
         player.score += token.value
+        self.tree_of_trees[player.number]["in_shop"].update({tree.id: tree})
+        self.tree_of_trees[player.number]["on_board"].pop(tree.id)
 
     @time_function
     def buy_tree(self, tree: Tree, cost: int):
@@ -254,6 +311,8 @@ class Board:
         player = [player for player in self.data.players if player.number == tree.owner][0]
         player.l_points -= cost
         tree.cost = 0
+        self.tree_of_trees[player.number]["bought"].update({tree.id: tree})
+        self.tree_of_trees[player.number]["in_shop"].pop(tree.id)
 
     @time_function
     def end_go(self, player_number):

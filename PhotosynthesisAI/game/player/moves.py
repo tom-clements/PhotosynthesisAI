@@ -1,3 +1,4 @@
+from copy import deepcopy
 from dataclasses import dataclass
 from PhotosynthesisAI.game.components import Tree, Tile
 from PhotosynthesisAI.game.utils.constants import PLANT_LP_COST, COLLECT_LP_COST
