@@ -7,9 +7,14 @@ from collections import namedtuple
 from matplotlib.patches import RegularPolygon
 from PhotosynthesisAI.game.utils.constants import BOARD_RADIUS, TOKENS, TREES
 from PhotosynthesisAI.game.components import Tile, Tree, Token
+from PhotosynthesisAI.game.utils.hex_tools import _get_coords_at_sun_edge, _get_coords_along_same_axis, \
+    _get_surrounding_coords
 from PhotosynthesisAI.game.utils.utils import find_array_in_2D_array, time_function
 from PhotosynthesisAI.game.player import Player
 from typing import List, Union, Dict, Tuple
+
+
+
 
 
 class Board:
@@ -55,7 +60,7 @@ class Board:
         Data = namedtuple("data", "tiles trees players tokens")
         self.data = Data(
             tiles=[
-                Tile(tree=None, coords=coord, index=self.get_tile_index(coord))
+                Tile(tree=None, coords=coord, index=self.get_tile_index(tuple(coord)))
                 for i, coord in enumerate(self.tile_coords)
             ],
             trees=np.array(trees),
@@ -67,37 +72,54 @@ class Board:
     # UTILS #
     #########
 
+    @classmethod
     @lru_cache(maxsize=None)
     @time_function
-    def _get_tile_from_coords(self, coords: Tuple) -> Tile:
-        # can maybe cache this calculalion, although it is quite quick
-        mask = find_array_in_2D_array(np.array(coords), self.tile_coords)
-        return np.array(self.data.tiles)[mask][0]
+    def _get_tile_index_from_coords(cls, coords: Tuple[int]) -> int:
+        mask = find_array_in_2D_array(np.array(coords), cls.tile_coords)
+        index = np.where(mask)[0][0]
+        return index
 
     @lru_cache(maxsize=None)
     @time_function
     def get_surrounding_tiles(self, tile: Tile, radius: int) -> Tuple[Tile]:
-        surrounding_tile_coords = tile.get_surrounding_coords(radius)
-
-        # subset to tiles in board and exclude the tile itself
-        surrounding_tile_coords = [
-            self._get_tile_from_coords(tuple(coord))
+        surrounding_tile_coords = _get_surrounding_coords(tuple(tile.coords), radius, BOARD_RADIUS)
+        surrounding_tiles = [
+            self.data.tiles[self._get_tile_index_from_coords(tuple(coord))]
             for coord in surrounding_tile_coords
-            if (max(np.absolute(coord)) <= BOARD_RADIUS) & (not all(coord == tile.coords))
         ]
-        return tuple(surrounding_tile_coords)
+        return tuple(surrounding_tiles)
 
     @classmethod
+    @lru_cache(maxsize=None)
     @time_function
-    def get_tile_index(cls, coord):
-        mask = find_array_in_2D_array(coord, cls.tile_coords)
+    def get_tile_index(cls, coord: Tuple) -> int:
+        mask = find_array_in_2D_array(np.array(coord), cls.tile_coords)
         return int(np.where(mask)[0])
 
     @time_function
     def get_empty_unlocked_tiles(self) -> List[Tile]:
         return [tile for tile in self.data.tiles if (not tile.tree) & (not tile.is_locked)]
 
-    #########
+    @lru_cache(maxsize=None)
+    @time_function
+    def _get_tiles_at_sun_edge(self, sun: Tuple) -> List[Tile]:
+        board_coords = tuple([tuple(coord) for coord in self.tile_coords])
+        edge_coords = _get_coords_at_sun_edge(tuple(sun), board_coords)
+        tiles = [
+            self.data.tiles[self._get_tile_index_from_coords(tuple(coords))]
+            for coords in edge_coords
+        ]
+        return tiles
+
+    @lru_cache(maxsize=None)
+    @time_function
+    def _get_tiles_along_same_axis(self, start_tile: Tile, axis: Tuple[int]) -> Tuple[Tile]:
+        tiles = [
+            self.data.tiles[self._get_tile_index_from_coords(tuple(coords))]
+            for coords in _get_coords_along_same_axis(tuple(start_tile.coords), axis, BOARD_RADIUS)
+        ]
+        return tuple(tiles)
 
     ######################
     # ROUND CALCULATIONS #
@@ -127,38 +149,6 @@ class Board:
         return
 
     @time_function
-    def _get_tiles_at_sun_edge(self) -> List[Tile]:
-        sun = self.suns[self.sun_position]
-        mask = (
-            np.count_nonzero(
-                (np.array([np.array(sun) for t in self.tile_coords]) == self.tile_coords / 3) * np.array(sun), axis=1
-            )
-            > 0
-        )
-        edge_coords = self.tile_coords[mask]
-        tiles = [self._get_tile_from_coords(tuple(coords)) for coords in edge_coords]
-        return tiles
-
-    @lru_cache(maxsize=None)
-    @time_function
-    def _get_coords_along_same_axis(self, coords: Tuple[int], axis: Tuple[int]) -> Tuple[Tuple[int]]:
-        tiles = []
-        coords = np.array(coords)
-        while max(abs(coords)) <= BOARD_RADIUS:
-            tiles.append(tuple(coords))
-            coords = coords - axis
-        return tuple(tiles)
-
-    @lru_cache(maxsize=None)
-    @time_function
-    def _get_tiles_along_same_axis(self, start_tile: Tile, axis: Tuple[int]) -> Tuple[Tile]:
-        tiles = [
-            self._get_tile_from_coords(coords)
-            for coords in self._get_coords_along_same_axis(tuple(start_tile.coords), axis)
-        ]
-        return tuple(tiles)
-
-    @time_function
     def _set_shadows_along_axis(self, tile: Tile, axis: np.ndarray):
         axis_tiles = self._get_tiles_along_same_axis(tile, tuple(axis))
         current_shadow_size = 0
@@ -172,11 +162,9 @@ class Board:
     @time_function
     def _set_shadows(self):
         sun = self.suns[self.sun_position]
-        edge_tiles = self._get_tiles_at_sun_edge()
+        edge_tiles = self._get_tiles_at_sun_edge(tuple(sun))
         for tile in edge_tiles:
             self._set_shadows_along_axis(tile, sun)
-
-    ######################
 
     ##################
     # MOVE EXECUTION #
@@ -274,8 +262,6 @@ class Board:
         return True
 
     ##################
-
-    ##################
     # VISUALISAIION #
     ##################
 
@@ -326,5 +312,3 @@ class Board:
         ax.scatter(hcoord, vcoord, c=shadows, alpha=0.5)
         plt.axis("off")
         plt.show()
-
-    ###################

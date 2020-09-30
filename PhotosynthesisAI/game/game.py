@@ -76,57 +76,54 @@ class Game:
             return [player for player, score in scores.items() if score == max_score]
 
         else:
-            raise ValueError('The game has not finished!')
+            raise ValueError("The game has not finished!")
 
     def get_state(self) -> Dict:
         # remove metadata - maybe keep cost?
-        tree_keys_to_remove = ['shadow', 'tile', 'cost', 'score', 'tree_type']
+        tree_keys_to_remove = ["shadow", "tile", "cost", "score", "tree_type"]
         tiles = [deepcopy(tile.__dict__) for tile in self.board.data.tiles]
         for tile in tiles:
-            if tile['tree']:
-                tile['owner'] = tile['tree'].owner
-                tile['size'] = tile['tree'].size
+            if tile["tree"]:
+                tile["owner"] = tile["tree"].owner
+                tile["size"] = tile["tree"].size
             else:
-                tile['owner'] = None
-                tile['size'] = None
-            tile.pop('tree')
-        trees = [
-            deepcopy(tree.__dict__)
-            for tree in self.board.data.trees
-        ]
+                tile["owner"] = None
+                tile["size"] = None
+            tile.pop("tree")
+        trees = [deepcopy(tree.__dict__) for tree in self.board.data.trees]
         for t in trees:
             for k in tree_keys_to_remove:
                 t.pop(k)
-        trees = sorted(trees, key=lambda i: (i['is_bought'], i['size']))
+        trees = sorted(trees, key=lambda i: (i["is_bought"], i["size"]))
         l_points = {player.number: player.l_points for player in self.players}
         scores = {player.number: player.score for player in self.players}
         round_number = self.board.round_number
         state = {
-            'tiles': tiles,
-            'trees': trees,
-            'l_points': l_points,
-            'scores': scores,
-            'round_number': round_number,
-            'turns_in_round': self.round_turn
+            "tiles": tiles,
+            "trees": trees,
+            "l_points": l_points,
+            "scores": scores,
+            "round_number": round_number,
+            "turns_in_round": self.round_turn,
         }
         return state
 
     def get_partial_state(self) -> Dict:
-        tile_keys_to_remove = ['coords', 'richness', 'is_locked', 'is_shadow']
+        tile_keys_to_remove = ["coords", "richness", "is_locked", "is_shadow"]
         tiles = [deepcopy(tile.__dict__) for tile in self.board.data.tiles]
         for tile in tiles:
-            if tile['tree']:
-                tile['owner'] = tile['tree'].owner
+            if tile["tree"]:
+                tile["owner"] = tile["tree"].owner
                 # tile['size'] = tile['tree'].size
             else:
-                tile['owner'] = None
-                tile['size'] = None
-            tile.pop('tree')
+                tile["owner"] = None
+                tile["size"] = None
+            tile.pop("tree")
             for k in tile_keys_to_remove:
                 tile.pop(k)
         round_number = self.board.round_number
         state = {
-            'tiles': tiles,
+            "tiles": tiles,
             # 'round_number': round_number,
         }
         return state

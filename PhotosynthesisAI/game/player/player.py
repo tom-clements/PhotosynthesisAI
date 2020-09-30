@@ -16,9 +16,11 @@ class Player:
     @time_function
     def starting_moves(self, board: "Board") -> List[Plant]:
         free_tiles = [tile for tile in board.data.tiles if (3 in abs(tile.coords)) & (not tile.tree)]
-        starting_tree = [tree
-                         for tree in board.data.trees
-                         if (tree.owner == self.number) & (tree.size == 1) & tree.is_bought & (tree.tile is None)][0]
+        starting_tree = [
+            tree
+            for tree in board.data.trees
+            if (tree.owner == self.number) & (tree.size == 1) & tree.is_bought & (tree.tile is None)
+        ][0]
         return [Plant(board=board, tile=tile, tree=starting_tree, cost=0) for tile in free_tiles]
 
     @time_function

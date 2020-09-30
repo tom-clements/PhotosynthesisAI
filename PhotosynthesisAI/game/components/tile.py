@@ -2,8 +2,10 @@ from typing import Union
 
 import hexy as hx
 import numpy as np
+
 from .tree import Tree
 from PhotosynthesisAI.game.utils.constants import RICHNESS
+from ..utils.hex_tools import _get_coord_radius
 from ..utils.utils import time_function
 
 
@@ -18,14 +20,10 @@ class Tile:
         self.is_shadow = is_shadow
         self.richness = self._get_richness()
 
-    def get_adjacent_tile(self, axis: np.ndarray) -> np.ndarray:
-        return self.coords + axis
+    # def get_adjacent_tile(self, axis: np.ndarray) -> np.ndarray:
+    #     return self.coords + axis
 
     @time_function
-    def get_surrounding_coords(self, radius: int) -> np.ndarray:
-        surrounding_tile_coords = hx.get_disk(self.coords, radius)
-        return surrounding_tile_coords
-
     def _get_richness(self) -> int:
-        radius = int(sum(abs(self.coords)) / 2)
+        radius = _get_coord_radius(tuple(self.coords))
         return RICHNESS[radius]

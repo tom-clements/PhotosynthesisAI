@@ -8,9 +8,8 @@ from PhotosynthesisAI.game.player import moves
 
 
 class ExpertSystemAI(BaseAI):
-
     def pick_move(self, board: Board, availablle_moves: List[Move]) -> Move:
-        collecting_moves  = [move for move in availablle_moves if type(Move) == moves.Collect]
+        collecting_moves = [move for move in availablle_moves if type(Move) == moves.Collect]
         planting_moves = [move for move in availablle_moves if type(Move) == moves.Plant]
         growing_moves = [move for move in availablle_moves if type(Move) == moves.Plant]
 
@@ -30,23 +29,19 @@ class ExpertSystemAI(BaseAI):
         if len(planting_moves) > 1:
             # get number of surrounding trees
             surrounding_tiles = [
-                sum([bool(tile.tree) for tile in board.get_surrounding_tiles(move.tile, 1)])
-                for move in planting_moves
-
+                sum([bool(tile.tree) for tile in board.get_surrounding_tiles(move.tile, 1)]) for move in planting_moves
             ]
             planting_move = planting_moves[surrounding_tiles.index(min(surrounding_tiles))]
             availablle_moves = [
-                move for move in availablle_moves
-                if not ((type(move) == moves.Plant) & (move != planting_move))
+                move for move in availablle_moves if not ((type(move) == moves.Plant) & (move != planting_move))
             ]
 
         return random.choice(availablle_moves)
 
 
 class ExpertSystemAI2(BaseAI):
-
     def pick_move(self, board: Board, availablle_moves: List[Move]) -> Move:
-        collecting_moves  = [move for move in availablle_moves if type(Move) == moves.Collect]
+        collecting_moves = [move for move in availablle_moves if type(Move) == moves.Collect]
         planting_moves = [move for move in availablle_moves if type(Move) == moves.Plant]
         growing_moves = [move for move in availablle_moves if type(Move) == moves.Plant]
 
@@ -66,14 +61,11 @@ class ExpertSystemAI2(BaseAI):
         if len(planting_moves) > 1:
             # get number of surrounding trees
             surrounding_tiles = [
-                sum([bool(tile.tree) for tile in board.get_surrounding_tiles(move.tile, 1)])
-                for move in planting_moves
-
+                sum([bool(tile.tree) for tile in board.get_surrounding_tiles(move.tile, 1)]) for move in planting_moves
             ]
             planting_move = planting_moves[surrounding_tiles.index(min(surrounding_tiles))]
             availablle_moves = [
-                move for move in availablle_moves
-                if not ((type(move) == moves.Plant) & (move != planting_move))
+                move for move in availablle_moves if not ((type(move) == moves.Plant) & (move != planting_move))
             ]
 
         return random.choice(availablle_moves)
