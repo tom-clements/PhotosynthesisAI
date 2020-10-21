@@ -5,18 +5,30 @@ from .moves import Plant, Grow, Collect, Buy, EndGo
 from ..components.tree import Tree
 from .moves import Move
 from ..utils.utils import time_function
+from ..utils.constants import BOARD_RADIUS
 
 
 class Player:
-    def __init__(self, number):
-        self.number = number
+    def __init__(self):
+        self.number = None
         self.l_points = 0
+        self.l_points_earned_history = []
         self.score = 0
         self.go_active = True
 
+    def reset(self, game: "Game"):
+        self.l_points = 0
+        self.l_points_earned_history = []
+        self.score = 0
+        self.go_active = True
+        self.initialise(game)
+
+    def initialise(self, game: "Game"):
+        pass
+
     @time_function
     def starting_moves(self, board: "Board") -> List[Plant]:
-        free_tiles = [tile for tile in board.data.tiles if (3 in abs(tile.coords)) & (not tile.tree)]
+        free_tiles = [tile for tile in board.data.tiles if (BOARD_RADIUS in abs(tile.coords)) & (not tile.tree)]
         starting_tree = [
             tree
             for tree in board.data.trees
@@ -75,7 +87,7 @@ class Player:
                     # check if can afford
                     if self.l_points < tree.size:
                         continue
-                    moves.append(Grow(board=board, from_tree=tree, to_tree=g_tree, cost=tree.size))
+                    moves.append(Grow(board=board, tree=tree, to_tree=g_tree, cost=tree.size))
                     # there is no point having multiple moves for growing to all available trees, so break early
                     break
         return moves
@@ -91,11 +103,36 @@ class Player:
     @time_function
     def get_buying_moves(self, board: "Board", trees_bought: List[Tree], trees_in_shop: List[Tree]) -> List[Buy]:
         bought_tree_sizes = list(set([tree.size for tree in trees_bought]))
-        moves = [
-            Buy(board=board, tree=tree, cost=tree.cost)
+        trees_available = [
+            tree
             for tree in trees_in_shop
             if (tree.cost <= self.l_points) & (tree.size not in bought_tree_sizes)
         ]
+        if not trees_available:
+            return []
+        # get lowest price tree in shop
+        moves = []
+        for tree_spec in TREES.values():
+            trees_to_buy = [tree.cost for tree in trees_available if tree.size == tree_spec['size']]
+            if not trees_to_buy:
+                continue
+            if len(trees_to_buy) == 1:
+                tree_to_buy = [tree for tree in trees_available if tree.size == tree_spec['size']][0]
+                moves.append(Buy(board=board, tree=tree_to_buy, cost=tree_to_buy.cost))
+            else:
+                lowest_cost_tree_value = min(trees_to_buy)
+                tree_to_buy = [
+                    tree
+                    for tree in trees_available
+                    if (tree.size == tree_spec['size']) & (tree.cost == lowest_cost_tree_value)
+                ][0]
+                moves.append(Buy(board=board, tree=tree_to_buy, cost=tree_to_buy.cost))
+
+        # moves = [
+        #     Buy(board=board, tree=tree, cost=tree.cost)
+        #     for tree in trees_in_shop
+        #     if (tree.cost <= self.l_points) & (tree.size not in bought_tree_sizes)
+        # ]
         return moves
 
     @time_function
@@ -115,9 +152,9 @@ class Player:
             + [EndGo(board=board, player_number=self.number)]
         )
 
-    @time_function
-    def move(self, move):
-        move.execute()
+    # @time_function
+    # def move(self, move, board):
+    #     move.execute()
 
-    def play_turn(self, board):
+    def play_turn(self, game):
         return

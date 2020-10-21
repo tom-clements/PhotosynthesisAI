@@ -1,4 +1,3 @@
-from _collections import defaultdict
 
 BOARD_RADIUS = 3
 PLANT_LP_COST = 1

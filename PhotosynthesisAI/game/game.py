@@ -7,7 +7,7 @@ from copy import deepcopy
 import pandas as pd
 
 from .components import Board
-from PhotosynthesisAI.game.utils.constants import MAX_SUN_ROTATIONS
+from PhotosynthesisAI.game.utils.constants import MAX_SUN_ROTATIONS, TREES
 from .player import Player
 from .utils.utils import hash_text, time_function
 
@@ -18,18 +18,26 @@ logging.basicConfig(level=logging.INFO)
 class Game:
     def __init__(self, players: List[Player]):
         self.players = players
-        self.board = Board(players)
         self.round_turn = 0
         self.states = []
+        self.board = Board(players)
+        self.total_num_actions = self._total_num_actions()
+        self.reset()
+
+    def reset(self):
         for player in self.players:
-            player.score = 0
-            player.l_points = 0
+            player.reset(self)
+            self.set_initial_player_order()
+
+        self.board.reset()
+        return
 
     def player_turns(self):
-        for i, player in enumerate(self.player_order):
+        for i, player in enumerate(self.players):
             while player.go_active:
-                player.play_turn(self.board)
-                # self.states.append(hash_text(str(self.get_partial_state())))
+                player.play_turn(self)
+                self.get_linear_features()
+                # self.states.append(hash_text(str(self.get_linear_features())))
                 if self.board.round_number in [0, 1]:
                     break
             self.round_turn = i
@@ -51,17 +59,20 @@ class Game:
     def show(self):
         self.board.show()
 
+    def set_initial_player_order(self):
+        random.shuffle(self.players)
+        for i, player in enumerate(self.players):
+            player.number = i + 1
+
     @time_function
     def set_player_order(self):
         if self.board.round_number == 0:
-            player_order = self.players
-            random.shuffle(player_order)
-            self.player_order = player_order
+            return
         # don't rotate until round 2 after 2 initial and first normal round
         elif self.board.round_number in [1, 2]:
             return
         else:
-            self.player_order = self.player_order[1:] + [self.player_order[0]]
+            self.players = self.players[1:] + [self.players[0]]
 
     def is_game_over(self):
         return self.board.round_number == (MAX_SUN_ROTATIONS * 6) + 2
@@ -76,54 +87,78 @@ class Game:
             return [player for player, score in scores.items() if score == max_score]
 
         else:
-            raise ValueError("The game has not finished!")
+            raise ValueError('The game has not finished!')
 
+    def _total_num_actions(self) -> int:
+        num_tile_actions = len(self.board.data.tiles)
+        num_buy_moves = len(TREES.keys())
+        end_go_moves = 1
+        # plant + grow + collect = 3 * num_tile_actions
+        return num_tile_actions * 3 + num_buy_moves + end_go_moves
+
+    @time_function
     def get_state(self) -> Dict:
         # remove metadata - maybe keep cost?
-        tree_keys_to_remove = ["shadow", "tile", "cost", "score", "tree_type"]
+        tree_keys_to_remove = ['shadow', 'tile', 'cost', 'score', 'tree_type']
         tiles = [deepcopy(tile.__dict__) for tile in self.board.data.tiles]
         for tile in tiles:
-            if tile["tree"]:
-                tile["owner"] = tile["tree"].owner
-                tile["size"] = tile["tree"].size
+            if tile['tree']:
+                tile['owner'] = tile['tree'].owner
+                tile['size'] = tile['tree'].size
             else:
-                tile["owner"] = None
-                tile["size"] = None
-            tile.pop("tree")
-        trees = [deepcopy(tree.__dict__) for tree in self.board.data.trees]
+                tile['owner'] = None
+                tile['size'] = None
+            tile.pop('tree')
+        trees = [
+            deepcopy(tree.__dict__)
+            for tree in self.board.data.trees
+        ]
         for t in trees:
             for k in tree_keys_to_remove:
                 t.pop(k)
-        trees = sorted(trees, key=lambda i: (i["is_bought"], i["size"]))
+        trees = sorted(trees, key=lambda i: (i['is_bought'], i['size']))
         l_points = {player.number: player.l_points for player in self.players}
         scores = {player.number: player.score for player in self.players}
         round_number = self.board.round_number
         state = {
-            "tiles": tiles,
-            "trees": trees,
-            "l_points": l_points,
-            "scores": scores,
-            "round_number": round_number,
-            "turns_in_round": self.round_turn,
+            'tiles': tiles,
+            'trees': trees,
+            'l_points': l_points,
+            'scores': scores,
+            'round_number': round_number,
+            'turns_in_round': self.round_turn
         }
         return state
 
+    @time_function
     def get_partial_state(self) -> Dict:
-        tile_keys_to_remove = ["coords", "richness", "is_locked", "is_shadow"]
+        tile_keys_to_remove = ['coords', 'richness', 'is_locked', 'is_shadow']
         tiles = [deepcopy(tile.__dict__) for tile in self.board.data.tiles]
         for tile in tiles:
-            if tile["tree"]:
-                tile["owner"] = tile["tree"].owner
+            if tile['tree']:
+                tile['owner'] = tile['tree'].owner
                 # tile['size'] = tile['tree'].size
             else:
-                tile["owner"] = None
-                tile["size"] = None
-            tile.pop("tree")
+                tile['owner'] = None
+                tile['size'] = None
+            tile.pop('tree')
             for k in tile_keys_to_remove:
                 tile.pop(k)
         round_number = self.board.round_number
         state = {
-            "tiles": tiles,
+            'tiles': tiles,
             # 'round_number': round_number,
         }
         return state
+
+    @time_function
+    def get_linear_features(self) -> List:
+        # does not work with more than 2 players
+        tiles = {
+            f"tile{tile.index}": ((player.number - 2) * (tile.tree.size + 1) if tile.tree else 0)
+            for player in self.players for tile in self.board.data.tiles
+        }
+        return list(tiles.values())
+
+    def execute_move(self, move):
+        move.execute()

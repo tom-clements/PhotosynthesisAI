@@ -21,7 +21,7 @@ class Series:
     def __init__(self, players: List[Player], num_matches: int):
         self.players = players
         self.num_matches = num_matches
-        self.match_scores = {p.number: [] for p in players}
+        self.match_scores = {i + 1: [] for i in range(len(players))}
         self.game_states = []
         self.len_states = [0]
         self.len_duplicate_states = []
@@ -57,8 +57,8 @@ class Series:
         results_df = pd.DataFrame(self.match_scores)
         plotting_columns = []
         for p in self.players:
-            plotting_columns.append(f"{p.number}_score")
-            results_df[f"{p.number}_score"] = results_df[p.number].cumsum()
+            plotting_columns.append(f"{p.__class__.__name__}:{p.number}_score")
+            results_df[f"{p.__class__.__name__}:{p.number}_score"] = results_df[p.number].cumsum()
         results_df[plotting_columns].plot()
         plt.show()
 

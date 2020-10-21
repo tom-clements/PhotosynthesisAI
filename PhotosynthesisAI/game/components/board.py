@@ -36,9 +36,33 @@ class Board:
 
     @time_function
     def __init__(self, players: List[Player]):
+        self.players = players
+        self.player_count = len(self.players)
+        self.tuple_tile_coords = tuple([tuple(coord) for coord in self.tile_coords])
+        self.reset()
+        # self.round_number = 0
+        # self.sun_position = 5
+        # self.pg_active = False
+        # trees = self._get_initial_trees()
+        # self.data = self._get_initial_data(trees)
+        # self.tree_of_trees = self._get_tree_index(trees)
+
+    def _get_initial_data(self, trees):
+        Data = namedtuple("data", "tiles trees players tokens")
+        data = Data(
+            tiles=[
+                Tile(tree=None, coords=coord, index=self.get_tile_index(tuple(coord)))
+                for i, coord in enumerate(self.tile_coords)
+            ],
+            trees=np.array(trees),
+            players=self.players,
+            tokens=[Token(richness=key, value=value) for key in TOKENS for value in TOKENS[key]],
+        )
+        return data
+
+    def _get_initial_trees(self) -> List:
         trees = []
-        tree_count = 0
-        for i, p in enumerate(players):
+        for i, p in enumerate(self.players):
             for tree_type in TREES.keys():
                 tree_count = len(trees)
                 tree = TREES[tree_type]
@@ -66,24 +90,11 @@ class Board:
                     )
                     for j, cost in enumerate(tree["cost"])
                 ]
-        self.round_number = 0
-        self.pg_active = False
-        self.sun_position = 5
-        Data = namedtuple("data", "tiles trees players tokens")
-        self.data = Data(
-            tiles=[
-                Tile(tree=None, coords=coord, index=self.get_tile_index(tuple(coord)))
-                for i, coord in enumerate(self.tile_coords)
-            ],
-            trees=np.array(trees),
-            players=players,
-            tokens=[Token(richness=key, value=value) for key in TOKENS for value in TOKENS[key]],
-        )
+        return trees
 
-        self.tuple_tile_coords = tuple([tuple(coord) for coord in self.tile_coords])
-
+    def _get_tree_index(self, trees):
         # index these separately so don't need to calculate many times
-        self.tree_of_trees = {
+        tree_of_trees = {
             player.number: {
                 "bought": {
                     tree.id: tree for tree in trees if (tree.owner == player.number) & (not tree.tile) & tree.is_bought
@@ -97,8 +108,19 @@ class Board:
                     tree.id: tree for tree in trees if (tree.owner == player.number) & (tree.tile is not None)
                 },
             }
-            for player in players
+            for player in self.players
         }
+        return tree_of_trees
+
+
+    def reset(self):
+        self.round_number = 0
+        self.sun_position = 5
+        self.pg_active = False
+        trees = self._get_initial_trees()
+        self.data = self._get_initial_data(trees)
+        self.tree_of_trees = self._get_tree_index(trees)
+
 
     #########
     # UTILS #
@@ -171,6 +193,7 @@ class Board:
             if (not tile.is_shadow) & (tile.tree is not None):
                 player = [player for player in self.data.players if player.number == tile.tree.owner][0]
                 player.l_points += tile.tree.score
+                player.l_points_earned_history.append(tile.tree.score)
 
     @time_function
     def rotate_sun(self):
@@ -202,7 +225,10 @@ class Board:
 
     @time_function
     def get_next_token(self, richness: int) -> Token:
-        # get the first token
+        # in two player game, richness 4 is removed fom the game
+        if (self.player_count == 2) & (richness == 4):
+            richness = 3
+
         while richness > 0:
             tokens = [token for token in self.data.tokens if (token.richness == richness) & (token.owner is None)]
             if tokens:
@@ -231,7 +257,7 @@ class Board:
         player = [player for player in self.data.players if player.number == tile.tree.owner][0]
         player.l_points -= cost
 
-        # -put back in shop
+        # put back in shop
         num_trees_of_type_in_store = len(
             [
                 board_tree
