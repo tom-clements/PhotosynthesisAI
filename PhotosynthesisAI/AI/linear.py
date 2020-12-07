@@ -7,15 +7,6 @@ from dataclasses import dataclass
 from sklearn.linear_model import SGDRegressor
 from typing import List
 
-# action space
-# grow for tile in board
-# plant for tile in board
-# collect for tile in board
-# buy seed
-# buy small
-# buy medium
-# buy large
-# pass
 from PhotosynthesisAI import Game
 
 
@@ -127,10 +118,6 @@ class LinearAI(BaseAI):
         self.policy = make_epsilon_greedy_policy(
             self.estimator, self.epsilon, game.total_num_actions)
 
-    # def pick_move(self, game: Game, available_moves: List[Move]) -> Move:
-    #     action = np.random.choice(game.total_num_actions, p=self.policy(game.get_linear_features()))
-    #     return
-
     def play_turn(self, game):
         moves = self.starting_moves(game.board) if game.board.round_number in [0, 1] else self.moves_available(game.board)
         self.play_move(game, moves)
@@ -148,7 +135,6 @@ class LinearAI(BaseAI):
         )
         move = self.action_to_move(action, moves)
 
-        # Perform the action -> Get the reward and observe the next state
         new_state, reward = self.env.step(move)
 
         new_action = np.random.choice(
@@ -158,8 +144,6 @@ class LinearAI(BaseAI):
 
         q_values_new_state = self.estimator.predict(state_features=new_state, available_actions=available_actions)
 
-        # value that we should have got
-        # The Q-learning target policy is a greedy one, hence the `max`
         td_target = reward + self.discount_factor * np.nanmax(q_values_new_state)
         self.estimator.update(action, start_state, td_target)
 
