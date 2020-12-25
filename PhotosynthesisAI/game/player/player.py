@@ -158,3 +158,7 @@ class Player:
 
     def play_turn(self, game):
         return
+
+    def save_progress(self):
+        pass
+

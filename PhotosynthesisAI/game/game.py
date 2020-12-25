@@ -20,23 +20,20 @@ class Game:
         self.players = players
         self.round_turn = 0
         self.states = []
-        self.board = Board(players)
+        self.board = None
+        self.total_num_actions = None
+        self.set_initial_player_order()
+        self.board = Board(self.players)
         self.total_num_actions = self._total_num_actions()
-        self.reset()
-
-    def reset(self):
         for player in self.players:
             player.reset(self)
-            self.set_initial_player_order()
-
         self.board.reset()
-        return
 
     def player_turns(self):
         for i, player in enumerate(self.players):
             while player.go_active:
                 player.play_turn(self)
-                self.get_linear_features()
+                # self.get_linear_features()
                 # self.states.append(hash_text(str(self.get_linear_features())))
                 if self.board.round_number in [0, 1]:
                     break
@@ -60,7 +57,7 @@ class Game:
         self.board.show()
 
     def set_initial_player_order(self):
-        random.shuffle(self.players)
+        # random.shuffle(self.players)
         for i, player in enumerate(self.players):
             player.number = i + 1
 
@@ -152,13 +149,106 @@ class Game:
         return state
 
     @time_function
-    def get_linear_features(self) -> List:
+    def get_linear_features(self, player) -> List:
+        opponent = [p for p in self.players if p.number != player.number][0]
+        next_go_board = deepcopy(self.board)
+        next_go_board.rotate_sun()
+        next_go_board._set_shadows()
         # does not work with more than 2 players
-        tiles = {
-            f"tile{tile.index}": ((player.number - 2) * (tile.tree.size + 1) if tile.tree else 0)
-            for player in self.players for tile in self.board.data.tiles
-        }
-        return list(tiles.values())
+        toggle = -1 if player.number == 1 else 1
+        # tiles = {
+        #     f"tile{tile.index}": (toggle*(player.number*2 - 3) * (tile.tree.size + 1) if tile.tree else 0)
+        #     for player in self.players for tile in self.board.data.tiles
+        # }
+        tiles = [int(t.is_shadow) for t in next_go_board.data.tiles]
+        num_seeds_owned = len([tree for tree in self.board.tree_of_trees[player.number]['bought'].values() if tree.size == 0])
+        num_small_trees_owned = len([tree for tree in self.board.tree_of_trees[player.number]['bought'].values() if tree.size == 1])
+        num_medium_trees_owned = len([tree for tree in self.board.tree_of_trees[player.number]['bought'].values() if tree.size == 2])
+        num_large_trees_owned = len([tree for tree in self.board.tree_of_trees[player.number]['bought'].values() if tree.size == 3])
+        opp_num_seeds_owned = len([tree for tree in self.board.tree_of_trees[opponent.number]['bought'].values() if tree.size == 0])
+        opp_num_small_trees_owned = len([tree for tree in self.board.tree_of_trees[opponent.number]['bought'].values() if tree.size == 1])
+        opp_num_medium_trees_owned = len([tree for tree in self.board.tree_of_trees[opponent.number]['bought'].values() if tree.size == 2])
+        opp_num_large_trees_owned = len([tree for tree in self.board.tree_of_trees[opponent.number]['bought'].values() if tree.size == 3])
+        l_points = player.l_points
+        opponent_l_points = - opponent.l_points
+        score = player.score
+        opponent_score = - opponent.score
+        round_number = self.board.round_number
+        round_turn_number = self.round_turn
+        features = tiles + [
+            # num_seeds_owned,
+            # num_small_trees_owned,
+            # num_medium_trees_owned,
+            # num_large_trees_owned,
+            # opp_num_seeds_owned,
+            # opp_num_small_trees_owned,
+            # opp_num_medium_trees_owned,
+            # opp_num_large_trees_owned,
+            # l_points,
+            # opponent_l_points,
+            # score,
+            # opponent_score,
+            round_number,
+            round_turn_number,
+        ]
+        return features
 
     def execute_move(self, move):
         move.execute()
+
+    @time_function
+    def get_nn_features(self, player) -> List:
+        opponent = [p for p in self.players if p.number != player.number][0]
+        next_go_board = deepcopy(self.board)
+        next_go_board.rotate_sun()
+        next_go_board._set_shadows()
+        # does not work with more than 2 players
+        toggle = -1 if player.number == 1 else 1
+        tiles = {
+            f"tile{tile.index}": (toggle*(player.number*2 - 3) * (tile.tree.size + 1) if tile.tree else 0)
+            for player in self.players for tile in self.board.data.tiles
+        }
+        tiles_shadows = [int(t.is_shadow) for t in next_go_board.data.tiles]
+        num_seeds_owned = len(
+            [tree for tree in self.board.tree_of_trees[player.number]['bought'].values() if tree.size == 0])
+        num_small_trees_owned = len(
+            [tree for tree in self.board.tree_of_trees[player.number]['bought'].values() if tree.size == 1])
+        num_medium_trees_owned = len(
+            [tree for tree in self.board.tree_of_trees[player.number]['bought'].values() if tree.size == 2])
+        num_large_trees_owned = len(
+            [tree for tree in self.board.tree_of_trees[player.number]['bought'].values() if tree.size == 3])
+        opp_num_seeds_owned = len(
+            [tree for tree in self.board.tree_of_trees[opponent.number]['bought'].values() if tree.size == 0])
+        opp_num_small_trees_owned = len(
+            [tree for tree in self.board.tree_of_trees[opponent.number]['bought'].values() if tree.size == 1])
+        opp_num_medium_trees_owned = len(
+            [tree for tree in self.board.tree_of_trees[opponent.number]['bought'].values() if tree.size == 2])
+        opp_num_large_trees_owned = len(
+            [tree for tree in self.board.tree_of_trees[opponent.number]['bought'].values() if tree.size == 3])
+        l_points = player.l_points
+        opponent_l_points = - opponent.l_points
+        score = player.score
+        opponent_score = - opponent.score
+        round_number = self.board.round_number
+        round_turn_number = self.round_turn
+        features = tiles + [
+            num_seeds_owned,
+            num_small_trees_owned,
+            num_medium_trees_owned,
+            num_large_trees_owned,
+            opp_num_seeds_owned,
+            opp_num_small_trees_owned,
+            opp_num_medium_trees_owned,
+            opp_num_large_trees_owned,
+            l_points,
+            opponent_l_points,
+            score,
+            opponent_score,
+            round_number,
+            round_turn_number,
+        ]
+        return features
+
+    def execute_move(self, move):
+        move.execute()
+

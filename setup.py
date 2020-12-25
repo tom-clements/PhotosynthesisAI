@@ -7,5 +7,5 @@ setup(
     author="Tom Clements",
     author_email="thomasalbertclements@gmail.com",
     packages=["PhotosynthesisAI"],  # same as name
-    install_requires=["numpy", "hexy", "matplotlib", "dataclasses"],  # external packages as dependencies
+    install_requires=["numpy", "hexy", "matplotlib", "dataclasses", "tensforflow"],  # external packages as dependencies
 )

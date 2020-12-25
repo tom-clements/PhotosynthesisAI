@@ -41,7 +41,8 @@ class Series:
                 self.match_scores[loser.number].append(LOSE_POINTS)
             self.game = game
             self.game_states += game.states
-            # if match_number % 10 == 0:
+            if match_number % 10 == 0:
+                self.store_results()
             #     num_states = len(self.game_states)
             #     self.game_states = list(set(self.game_states))
             #     self.len_duplicate_states.append(num_states - len(self.game_states))
@@ -53,13 +54,34 @@ class Series:
             #                     f"Num duplicate states seen: {sum(self.len_duplicate_states[-1:])}, "
             #                     f"States per match added:{states_per_match_added}")
 
-    def display_results(self):
+    def _get_results_df(self):
         results_df = pd.DataFrame(self.match_scores)
-        plotting_columns = []
-        for p in self.players:
-            plotting_columns.append(f"{p.__class__.__name__}:{p.number}_score")
-            results_df[f"{p.__class__.__name__}:{p.number}_score"] = results_df[p.number].cumsum()
-        results_df[plotting_columns].plot()
+        results_df.columns = [f"{p.__class__.__name__}{p.number}" for p in self.players]
+        for col in results_df:
+            results_df[f"{col}_score"] = results_df[col].cumsum()
+        results_df['win_rate'] = results_df[results_df.columns[0]].rolling(20).mean()
+        return results_df
+
+    @time_function
+    def store_results(self):
+        results_df = self._get_results_df()
+        results_df.to_csv('results.csv', index=False)
+        for player in self.players:
+            player.save_progress()
+
+    @classmethod
+    def load_results_plot(cls):
+        results_df = pd.read_csv('results.csv')
+        cls.plot_results(results_df)
+
+    def display_results(self):
+        results_df = self._get_results_df()
+        self.plot_results(results_df)
+
+    @staticmethod
+    def plot_results(results_df):
+        plotting_columns = [col for col in results_df if 'score' in col] + ['win_rate']
+        results_df[plotting_columns].plot(secondary_y='win_rate')
         plt.show()
 
     def get_function_time_metrics(self):

@@ -63,7 +63,7 @@ class Plant(Move):
 
     def __init__(self, board: "Board", tile: Tile = None, tree: Tree = None, cost: int = None):
         super().__init__(board, tile, tree, cost)
-        self.cost = PLANT_LP_COST
+        self.cost = self.cost if self.cost is not None else PLANT_LP_COST
 
     def execute(self):
         self.board.plant_tree(self.tile, self.tree, self.cost)
