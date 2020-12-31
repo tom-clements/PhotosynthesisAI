@@ -11,6 +11,7 @@ from ..utils.constants import BOARD_RADIUS
 class Player:
     def __init__(self):
         self.number = None
+        self.go_order = None
         self.l_points = 0
         self.l_points_earned_history = []
         self.score = 0

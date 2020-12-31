@@ -1,4 +1,5 @@
 import time
+import gc
 import logging
 import random
 from typing import List, Dict
@@ -19,7 +20,6 @@ class Game:
     def __init__(self, players: List[Player]):
         self.players = players
         self.round_turn = 0
-        self.states = []
         self.board = None
         self.total_num_actions = None
         self.set_initial_player_order()
@@ -33,8 +33,6 @@ class Game:
         for i, player in enumerate(self.players):
             while player.go_active:
                 player.play_turn(self)
-                # self.get_linear_features()
-                # self.states.append(hash_text(str(self.get_linear_features())))
                 if self.board.round_number in [0, 1]:
                     break
             self.round_turn = i
@@ -60,6 +58,7 @@ class Game:
         # random.shuffle(self.players)
         for i, player in enumerate(self.players):
             player.number = i + 1
+            player.go_order = i + 1
 
     @time_function
     def set_player_order(self):
@@ -81,7 +80,11 @@ class Game:
         if self.is_game_over():
             scores = self.get_score()
             max_score = max(scores.values())
-            return [player for player, score in scores.items() if score == max_score]
+            winners = [player for player, score in scores.items() if score == max_score]
+            if len(winners) > 1:
+                return []
+            else:
+                return winners
 
         else:
             raise ValueError('The game has not finished!')
@@ -193,22 +196,24 @@ class Game:
         ]
         return features
 
+    @time_function
     def execute_move(self, move):
         move.execute()
 
     @time_function
     def get_nn_features(self, player) -> List:
         opponent = [p for p in self.players if p.number != player.number][0]
-        next_go_board = deepcopy(self.board)
-        next_go_board.rotate_sun()
-        next_go_board._set_shadows()
+        # next_go_board = deepcopy(self.board)
+        # next_go_board.rotate_sun()
+        # next_go_board._set_shadows()
         # does not work with more than 2 players
-        toggle = -1 if player.number == 1 else 1
-        tiles = {
-            f"tile{tile.index}": (toggle*(player.number*2 - 3) * (tile.tree.size + 1) if tile.tree else 0)
-            for player in self.players for tile in self.board.data.tiles
-        }
-        tiles_shadows = [int(t.is_shadow) for t in next_go_board.data.tiles]
+        # tiles = {
+        #     f"tile{tile.index}": (toggle*(player.number*2 - 3) * (tile.tree.size + 1) if tile.tree else 0)
+        #     for player in self.players for tile in self.board.data.tiles
+        # }
+        # shadows = [int(t.is_shadow) for t in next_go_board.data.tiles]
+        sizes = [(int(t.tree.size) + 1 if t.tree else 0) for t in self.board.data.tiles]
+        owners = [(int(t.tree.owner) if t.tree else 0) for t in self.board.data.tiles]
         num_seeds_owned = len(
             [tree for tree in self.board.tree_of_trees[player.number]['bought'].values() if tree.size == 0])
         num_small_trees_owned = len(
@@ -231,7 +236,7 @@ class Game:
         opponent_score = - opponent.score
         round_number = self.board.round_number
         round_turn_number = self.round_turn
-        features = tiles + [
+        features = sizes + owners + [
             num_seeds_owned,
             num_small_trees_owned,
             num_medium_trees_owned,

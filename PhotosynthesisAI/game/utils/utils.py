@@ -29,6 +29,7 @@ def find_array_in_2D_array(array: Union[List, np.ndarray], list_array: np.ndarra
     for c in conditions:
         mask = mask & c
     return mask
+    return mask
 
 
 def hash_text(text: str) -> str:

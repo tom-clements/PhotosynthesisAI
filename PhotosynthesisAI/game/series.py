@@ -18,20 +18,21 @@ LOSE_POINTS = 0
 
 
 class Series:
-    def __init__(self, players: List[Player], num_matches: int):
+    def __init__(self, players: List[Player], num_matches: int, ):
         self.players = players
         self.num_matches = num_matches
         self.match_scores = {i + 1: [] for i in range(len(players))}
-        self.game_states = []
         self.len_states = [0]
         self.len_duplicate_states = []
+        self.most_recent_game = None
 
     @time_function
-    def play(self, verbose: bool = False):
+    def play(self, verbose: bool = False, show_board_each_turn: bool=False):
         for match_number in tqdm(range(self.num_matches)):
             # logger.info(f"playing match mumber {match_number}")
             game = Game(self.players)
-            game.play(verbose=verbose)
+            self.most_recent_game = game
+            game.play(verbose=verbose, show_board_each_turn=show_board_each_turn)
             winners = game.get_winner()
             winner_numbers = [player.number for player in winners]
             losers = [player for player in self.players if player.number not in winner_numbers]
@@ -40,26 +41,15 @@ class Series:
             for loser in losers:
                 self.match_scores[loser.number].append(LOSE_POINTS)
             self.game = game
-            self.game_states += game.states
             if match_number % 10 == 0:
                 self.store_results()
-            #     num_states = len(self.game_states)
-            #     self.game_states = list(set(self.game_states))
-            #     self.len_duplicate_states.append(num_states - len(self.game_states))
-            #     self.len_states.append(len(self.game_states))
-            #     if match_number != 0:
-            #         states_per_match_added = (self.len_states[-1] - self.len_states[-2])/10
-            #         logger.info(f"Match: {match_number}, "
-            #                     f"Num unique states: {self.len_states[-1]}, "
-            #                     f"Num duplicate states seen: {sum(self.len_duplicate_states[-1:])}, "
-            #                     f"States per match added:{states_per_match_added}")
 
     def _get_results_df(self):
         results_df = pd.DataFrame(self.match_scores)
         results_df.columns = [f"{p.__class__.__name__}{p.number}" for p in self.players]
         for col in results_df:
             results_df[f"{col}_score"] = results_df[col].cumsum()
-        results_df['win_rate'] = results_df[results_df.columns[0]].rolling(20).mean()
+        results_df['win_rate'] = results_df[results_df.columns[0]].expanding().mean()
         return results_df
 
     @time_function
