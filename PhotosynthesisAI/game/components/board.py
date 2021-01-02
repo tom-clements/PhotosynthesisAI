@@ -357,7 +357,7 @@ class Board:
         player_colors = {0: "green", 1: "red", 2: "blue"}
         colors = [player_colors[tile.tree.owner] if tile.tree else "green" for tile in self.data.tiles]
         shadows = ["black" if tile.is_shadow else "orange" for tile in self.data.tiles]
-        labels = [tile.coords if tile.tree else tile.coords for tile in self.data.tiles]
+        labels = [tile.tree.size if tile.tree else "" for tile in self.data.tiles]
         hcoord = [c[0] for c in self.tile_coords]
         vcoord = [2.0 * np.sin(np.radians(60)) * (c[1] - c[2]) / 3.0 for c in self.tile_coords]
 

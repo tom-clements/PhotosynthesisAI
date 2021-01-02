@@ -158,10 +158,6 @@ class Game:
         return features
 
     @time_function
-    def execute_move(self, move):
-        move.execute()
-
-    @time_function
     def get_nn_features(self, player) -> List:
         opponent = [p for p in self.players if p.number != player.number][0]
         sizes = [(int(t.tree.size) + 1 if t.tree else 0) for t in self.board.data.tiles]
@@ -219,5 +215,9 @@ class Game:
         )
         return features
 
+    @time_function
     def execute_move(self, move):
+        player_types = [p.__class__.__name__ for p in self.players]
+        if 'Human' in player_types:
+            logger.info(f"Executing move: {move.get_move_name()}")
         move.execute()

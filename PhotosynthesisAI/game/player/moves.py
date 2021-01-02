@@ -47,10 +47,8 @@ class Move:
     def get_name(self):
         return self.__class__.__name__
 
-    def get_notation(self):
-        if not self.tile:
-            return
-        self.tile.index
+    def get_move_name(self):
+        return self.__class__.__name__
 
 
 class Grow(Move):
@@ -62,6 +60,10 @@ class Grow(Move):
         self.board.grow_tree(self.tree, self.to_tree, self.cost)
         return self.board
 
+    def get_move_name(self):
+        return f"{self.__class__.__name__}_{self.tree.tile.notation}"
+
+
 
 class Plant(Move):
     def __init__(self, board: "Board", tile: Tile = None, tree: Tree = None, cost: int = None):
@@ -72,11 +74,17 @@ class Plant(Move):
         self.board.plant_tree(self.tile, self.tree, self.cost)
         return self.board
 
+    def get_move_name(self):
+        return f"{self.__class__.__name__}_{self.tile.notation}"
+
 
 class Buy(Move):
     def execute(self):
         self.board.buy_tree(self.tree, self.cost)
         return
+
+    def get_move_name(self):
+        return f"{self.__class__.__name__}_{self.tree.size}"
 
 
 class Collect(Move):
@@ -88,6 +96,8 @@ class Collect(Move):
         self.board.collect_tree(self.tree, self.cost)
         return self.board
 
+    def get_move_name(self):
+        return f"{self.__class__.__name__}_{self.tree.tile.notation}"
 
 class EndGo(Move):
     def __init__(self, board: "Board", player_number: int):

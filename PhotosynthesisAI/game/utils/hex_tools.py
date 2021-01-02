@@ -55,6 +55,6 @@ def get_coords_along_same_axis(coords: Tuple[int], axis: Tuple[int], max_radius:
 def notation_from_coords(coords: Tuple[int, int, int]) -> str:
     letter_number = int(coords[0]) + BOARD_RADIUS + 1
     letter = chr(ord("`") + letter_number)
-    rank_start_number = -coords[0] - BOARD_RADIUS if coords[0] <= 0 else -3
+    rank_start_number = -int(coords[0]) - BOARD_RADIUS if coords[0] <= 0 else -3
     number = int(coords[1]) - rank_start_number + 1
-    return f"{letter}{number}"
+    return f"{letter}{int(number)}"
