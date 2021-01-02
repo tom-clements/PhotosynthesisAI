@@ -1,3 +1,5 @@
+import names
+from collections import defaultdict
 from copy import deepcopy
 from typing import List
 from PhotosynthesisAI.game.utils.constants import TREES, PLANT_LP_COST, COLLECT_LP_COST
@@ -9,17 +11,22 @@ from ..utils.constants import BOARD_RADIUS
 
 
 class Player:
-    def __init__(self):
+    def __init__(self, name: str = None):
         self.number = None
+        self.go_order = None
         self.l_points = 0
-        self.l_points_earned_history = []
+        self.l_points_earned_history = defaultdict(list)
         self.score = 0
+        self.score_earned_history = defaultdict(list)
         self.go_active = True
+        self.color = None
+        self.name = name if name else names.get_first_name()
 
     def reset(self, game: "Game"):
         self.l_points = 0
-        self.l_points_earned_history = []
+        self.l_points_earned_history = defaultdict(list)
         self.score = 0
+        self.score_earned_history = defaultdict(list)
         self.go_active = True
         self.initialise(game)
 
@@ -104,27 +111,25 @@ class Player:
     def get_buying_moves(self, board: "Board", trees_bought: List[Tree], trees_in_shop: List[Tree]) -> List[Buy]:
         bought_tree_sizes = list(set([tree.size for tree in trees_bought]))
         trees_available = [
-            tree
-            for tree in trees_in_shop
-            if (tree.cost <= self.l_points) & (tree.size not in bought_tree_sizes)
+            tree for tree in trees_in_shop if (tree.cost <= self.l_points) & (tree.size not in bought_tree_sizes)
         ]
         if not trees_available:
             return []
         # get lowest price tree in shop
         moves = []
         for tree_spec in TREES.values():
-            trees_to_buy = [tree.cost for tree in trees_available if tree.size == tree_spec['size']]
+            trees_to_buy = [tree.cost for tree in trees_available if tree.size == tree_spec["size"]]
             if not trees_to_buy:
                 continue
             if len(trees_to_buy) == 1:
-                tree_to_buy = [tree for tree in trees_available if tree.size == tree_spec['size']][0]
+                tree_to_buy = [tree for tree in trees_available if tree.size == tree_spec["size"]][0]
                 moves.append(Buy(board=board, tree=tree_to_buy, cost=tree_to_buy.cost))
             else:
                 lowest_cost_tree_value = min(trees_to_buy)
                 tree_to_buy = [
                     tree
                     for tree in trees_available
-                    if (tree.size == tree_spec['size']) & (tree.cost == lowest_cost_tree_value)
+                    if (tree.size == tree_spec["size"]) & (tree.cost == lowest_cost_tree_value)
                 ][0]
                 moves.append(Buy(board=board, tree=tree_to_buy, cost=tree_to_buy.cost))
 
@@ -157,4 +162,20 @@ class Player:
     #     move.execute()
 
     def play_turn(self, game):
-        return
+        if game.board.round_number in [0, 1]:
+            moves = self.starting_moves(game.board)
+            self.play_move(game, moves)
+            end_go = [EndGo(board=game.board, player_number=self.number)]
+            self.play_move(game, end_go)
+        else:
+            moves = self.moves_available(game.board)
+            self.play_move(game, moves)
+
+    def play_move(self, game, moves):
+        pass
+
+    def save_progress(self):
+        pass
+
+    def game_ended(self, game):
+        pass

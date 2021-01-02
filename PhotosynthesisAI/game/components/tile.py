@@ -5,7 +5,7 @@ import numpy as np
 
 from .tree import Tree
 from PhotosynthesisAI.game.utils.constants import RICHNESS
-from ..utils.hex_tools import _get_coord_radius
+from ..utils.hex_tools import get_coord_radius, notation_from_coords
 from ..utils.utils import time_function
 
 
@@ -25,5 +25,9 @@ class Tile:
 
     @time_function
     def _get_richness(self) -> int:
-        radius = _get_coord_radius(tuple(self.coords))
+        radius = get_coord_radius(tuple(self.coords))
         return RICHNESS[radius]
+
+    @property
+    def notation(self):
+        return notation_from_coords(tuple(self.coords))

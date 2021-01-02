@@ -8,7 +8,6 @@ from PhotosynthesisAI.game.utils.utils import time_function
 
 
 class Move:
-
     def __init__(self, board: "Board", tile: Tile = None, tree: Tree = None, cost: int = None):
         self.board = board
         self.tile = tile
@@ -31,25 +30,29 @@ class Move:
     def _get_move_index(move_name: str, num_tile_actions: int, tile_index: int, tree_size: int) -> int:
         num_buy_moves = len(TREES.keys())
         starting_index = {
-            'Plant': 0,
-            'Grow': num_tile_actions*1,
-            'Collect': num_tile_actions*2,
-            'Buy': num_tile_actions*3,
-            'EndGo': num_tile_actions*3 + num_buy_moves
+            "Plant": 0,
+            "Grow": num_tile_actions * 1,
+            "Collect": num_tile_actions * 2,
+            "Buy": num_tile_actions * 3,
+            "EndGo": num_tile_actions * 3 + num_buy_moves,
         }
-        if move_name in ['Plant', 'Grow', 'Collect']:
+        if move_name in ["Plant", "Grow", "Collect"]:
             move_index = starting_index[move_name] + tile_index
-        elif move_name == 'Buy':
+        elif move_name == "Buy":
             move_index = starting_index[move_name] + tree_size
         else:
             move_index = starting_index[move_name]
         return move_index
 
+    def get_name(self):
+        return self.__class__.__name__
 
-
+    def get_notation(self):
+        if not self.tile:
+            return
+        self.tile.index
 
 class Grow(Move):
-
     def __init__(self, board: "Board", tree: Tree, to_tree: Tree, cost: int):
         super().__init__(board, tree=tree, tile=tree.tile, cost=cost)
         self.to_tree = to_tree
@@ -60,10 +63,9 @@ class Grow(Move):
 
 
 class Plant(Move):
-
     def __init__(self, board: "Board", tile: Tile = None, tree: Tree = None, cost: int = None):
         super().__init__(board, tile, tree, cost)
-        self.cost = PLANT_LP_COST
+        self.cost = self.cost if self.cost is not None else PLANT_LP_COST
 
     def execute(self):
         self.board.plant_tree(self.tile, self.tree, self.cost)
@@ -71,14 +73,12 @@ class Plant(Move):
 
 
 class Buy(Move):
-
     def execute(self):
         self.board.buy_tree(self.tree, self.cost)
         return
 
 
 class Collect(Move):
-
     def __init__(self, board: "Board", tile: Tile = None, tree: Tree = None, cost: int = None):
         super().__init__(board, tree.tile, tree, cost)
         self.cost = COLLECT_LP_COST
@@ -89,7 +89,6 @@ class Collect(Move):
 
 
 class EndGo(Move):
-
     def __init__(self, board: "Board", player_number: int):
         super().__init__(board)
         self.player_number = player_number
