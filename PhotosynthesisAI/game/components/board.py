@@ -394,7 +394,15 @@ class Board:
                 color="black",
             )
 
-        ax.text(7, 4, f"Round number {self.round_number}.{self.round_turn}", ha="center", va="center", size=10, color="black")
+        ax.text(
+            7,
+            4,
+            f"Round number {self.round_number}.{self.round_turn}",
+            ha="center",
+            va="center",
+            size=10,
+            color="black",
+        )
 
         # Add scatter points in hexagon centres
         ax.scatter(hcoord, vcoord, c=shadows, alpha=0.5)

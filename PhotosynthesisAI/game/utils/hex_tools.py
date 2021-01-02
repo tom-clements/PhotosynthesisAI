@@ -49,11 +49,12 @@ def get_coords_along_same_axis(coords: Tuple[int], axis: Tuple[int], max_radius:
         coords = coords - axis
     return tuple(tiles)
 
+
 @lru_cache(maxsize=None)
 @time_function
 def notation_from_coords(coords: Tuple[int]) -> str:
     letter_number = int(coords[0]) + BOARD_RADIUS + 1
-    letter = chr(ord('`')+letter_number)
+    letter = chr(ord("`") + letter_number)
     rank_start_number = -BOARD_RADIUS - min(int(coords[0]), int(coords[2]))
     number = int(coords[1]) - rank_start_number + 1
     return f"{letter}{number}"

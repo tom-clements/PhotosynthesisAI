@@ -52,6 +52,7 @@ class Move:
             return
         self.tile.index
 
+
 class Grow(Move):
     def __init__(self, board: "Board", tree: Tree, to_tree: Tree, cost: int):
         super().__init__(board, tree=tree, tile=tree.tile, cost=cost)
