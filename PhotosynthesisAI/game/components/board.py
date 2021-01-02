@@ -9,9 +9,9 @@ from matplotlib.patches import RegularPolygon
 from PhotosynthesisAI.game.utils.constants import BOARD_RADIUS, TOKENS, TREES
 from PhotosynthesisAI.game.components import Tile, Tree, Token
 from PhotosynthesisAI.game.utils.hex_tools import (
-    _get_coords_at_sun_edge,
-    _get_coords_along_same_axis,
-    _get_surrounding_coords,
+    get_coords_at_sun_edge,
+    get_coords_along_same_axis,
+    get_surrounding_coords,
 )
 from PhotosynthesisAI.game.utils.utils import find_array_in_2D_array, time_function
 from PhotosynthesisAI.game.player import Player
@@ -112,15 +112,14 @@ class Board:
         }
         return tree_of_trees
 
-
     def reset(self):
-        self.round_number = 0
+        self.round_number = 0  # number of rounds
+        self.round_turn = 0  # mid round turns - number between 0 and len(players) -1
         self.sun_position = 5
         self.pg_active = False
         trees = self._get_initial_trees()
         self.data = self._get_initial_data(trees)
         self.tree_of_trees = self._get_tree_index(trees)
-
 
     #########
     # UTILS #
@@ -141,7 +140,7 @@ class Board:
     @lru_cache(maxsize=None)
     @time_function
     def get_surrounding_tiles(self, tile: Tile, radius: int) -> Tuple[Tile]:
-        surrounding_tile_coords = _get_surrounding_coords(tuple(tile.coords), radius, BOARD_RADIUS)
+        surrounding_tile_coords = get_surrounding_coords(tuple(tile.coords), radius, BOARD_RADIUS)
         surrounding_tiles = [
             self.data.tiles[self._get_tile_index_from_coords(tuple(coord))] for coord in surrounding_tile_coords
         ]
@@ -161,7 +160,7 @@ class Board:
     @lru_cache(maxsize=None)
     @time_function
     def _get_tiles_at_sun_edge(self, sun: Tuple) -> List[Tile]:
-        edge_coords = _get_coords_at_sun_edge(tuple(sun), self.tuple_tile_coords)
+        edge_coords = get_coords_at_sun_edge(tuple(sun), self.tuple_tile_coords)
         tiles = [self.data.tiles[self._get_tile_index_from_coords(tuple(coords))] for coords in edge_coords]
         return tiles
 
@@ -170,7 +169,7 @@ class Board:
     def _get_tiles_along_same_axis(self, start_tile: Tile, axis: Tuple[int]) -> Tuple[Tile]:
         tiles = [
             self.data.tiles[self._get_tile_index_from_coords(tuple(coords))]
-            for coords in _get_coords_along_same_axis(tuple(start_tile.coords), axis, BOARD_RADIUS)
+            for coords in get_coords_along_same_axis(tuple(start_tile.coords), axis, BOARD_RADIUS)
         ]
         return tuple(tiles)
 
@@ -184,8 +183,6 @@ class Board:
             self._set_shadows()
             self.round_number += 1
             return
-        for player in self.data.players:
-            player.go_active = True
         self.rotate_sun()
         self._set_shadows()
         for tile in self.data.tiles:
@@ -193,7 +190,7 @@ class Board:
             if (not tile.is_shadow) & (tile.tree is not None):
                 player = [player for player in self.data.players if player.number == tile.tree.owner][0]
                 player.l_points += tile.tree.score
-                player.l_points_earned_history.append(tile.tree.score)
+                player.l_points_earned_history[self.round_number].append(tile.tree.score)
 
     @time_function
     def rotate_sun(self):
@@ -326,6 +323,7 @@ class Board:
         token = self.get_next_token(tile.richness)
         token.owner = tree.owner
         player.score += token.value
+        player.score_earned_history[self.round_number].append(token.value)
         self.tree_of_trees[player.number]["in_shop"].update({tree.id: tree})
         self.tree_of_trees[player.number]["on_board"].pop(tree.id)
 
@@ -344,7 +342,12 @@ class Board:
     def end_go(self, player_number):
         player = [player for player in self.data.players if player.number == player_number][0]
         player.go_active = False
-        return True
+        st = self.round_turn
+        if self.round_turn == len(self.players) - 1:
+            self.end_round()
+            self.round_turn = 0
+        else:
+            self.round_turn += 1
 
     ##################
     # VISUALISAIION #
@@ -354,7 +357,7 @@ class Board:
         player_colors = {0: "green", 1: "red", 2: "blue"}
         colors = [player_colors[tile.tree.owner] if tile.tree else "green" for tile in self.data.tiles]
         shadows = ["black" if tile.is_shadow else "orange" for tile in self.data.tiles]
-        labels = [tile.tree.size if tile.tree else "" for tile in self.data.tiles]
+        labels = [tile.coords if tile.tree else tile.coords for tile in self.data.tiles]
         hcoord = [c[0] for c in self.tile_coords]
         vcoord = [2.0 * np.sin(np.radians(60)) * (c[1] - c[2]) / 3.0 for c in self.tile_coords]
 
@@ -384,14 +387,14 @@ class Board:
             ax.text(
                 7,
                 2 - player.number / 2,
-                f"Player {player.number}: Light Points: {player.l_points}, score: {player.score}",
+                f"Player {player.name}: Light Points: {player.l_points}, score: {player.score}",
                 ha="center",
                 va="center",
                 size=10,
                 color="black",
             )
 
-        ax.text(7, 4, f"Round number {self.round_number}", ha="center", va="center", size=10, color="black")
+        ax.text(7, 4, f"Round number {self.round_number}.{self.round_turn}", ha="center", va="center", size=10, color="black")
 
         # Add scatter points in hexagon centres
         ax.scatter(hcoord, vcoord, c=shadows, alpha=0.5)

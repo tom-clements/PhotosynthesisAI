@@ -1,11 +1,8 @@
-from PhotosynthesisAI.AI import RandomAI, ExpertSystemAI, NeuralNetworkAI, LinearAI, SKlearnNNAI
+from PhotosynthesisAI.players import Human, RandomAI, ExpertSystemAI, NeuralNetworkAI, LinearAI, SKlearnNNAI
 from PhotosynthesisAI.game import Series
 
-
 if __name__ == "__main__":
-    players = [SKlearnNNAI(), SKlearnNNAI()]
-    series = Series(players=players, num_matches=50000)
+    players = [SKlearnNNAI(load_model=True, name="best_one"), Human()]
+    series = Series(players=players, num_matches=100)
     series.play()
-    players[0].save_progress()
     series.display_results()
-
