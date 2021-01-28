@@ -60,7 +60,7 @@ class Game:
             if not player.number:
                 player.number = i + 1
         order = [i for i in range(len(self.players))]
-        random.shuffle(order)
+        # random.shuffle(order)
         for i, player in enumerate(self.players):
             player.go_order = order[i]
             player.color = "white" if order[i] == 0 else "black"
@@ -158,6 +158,67 @@ class Game:
         return features
 
     @time_function
+    def get_nn_features4p(self, player) -> List:
+        opponents = [p for p in self.players if p.number != player.number]
+        sizes = [(int(t.tree.size) + 1 if t.tree else 0) for t in self.board.data.tiles]
+        owners = [(int(t.tree.owner) if t.tree else 0) for t in self.board.data.tiles]
+        owners = [(1 if i == player.number else -1) for i in owners]
+        num_seeds_owned = len(
+            [tree for tree in self.board.tree_of_trees[player.number]["bought"].values() if tree.size == 0]
+        )
+        num_small_trees_owned = len(
+            [tree for tree in self.board.tree_of_trees[player.number]["bought"].values() if tree.size == 1]
+        )
+        num_medium_trees_owned = len(
+            [tree for tree in self.board.tree_of_trees[player.number]["bought"].values() if tree.size == 2]
+        )
+        num_large_trees_owned = len(
+            [tree for tree in self.board.tree_of_trees[player.number]["bought"].values() if tree.size == 3]
+        )
+        opponent_numbers = []
+        for opponent in opponents:
+            opp_num_seeds_owned = len(
+                [tree for tree in self.board.tree_of_trees[opponent.number]["bought"].values() if tree.size == 0]
+            )
+            opp_num_small_trees_owned = len(
+                [tree for tree in self.board.tree_of_trees[opponent.number]["bought"].values() if tree.size == 1]
+            )
+            opp_num_medium_trees_owned = len(
+                [tree for tree in self.board.tree_of_trees[opponent.number]["bought"].values() if tree.size == 2]
+            )
+            opp_num_large_trees_owned = len(
+                [tree for tree in self.board.tree_of_trees[opponent.number]["bought"].values() if tree.size == 3]
+            )
+            opponent_numbers += [
+                opp_num_seeds_owned,
+                opp_num_small_trees_owned,
+                opp_num_medium_trees_owned,
+                opp_num_large_trees_owned,
+                opponent.l_points,
+                opponent.score
+            ]
+        l_points = player.l_points
+        score = player.score
+        round_number = self.board.round_number
+        round_turn_number = self.board.round_turn
+        features = (
+            sizes
+            + owners
+            + [
+                num_seeds_owned,
+                num_small_trees_owned,
+                num_medium_trees_owned,
+                num_large_trees_owned,
+                l_points,
+                score,
+            ] + opponent_numbers +
+            [
+                round_number,
+                round_turn_number,
+            ]
+        )
+        return features
+
     def get_nn_features(self, player) -> List:
         opponent = [p for p in self.players if p.number != player.number][0]
         sizes = [(int(t.tree.size) + 1 if t.tree else 0) for t in self.board.data.tiles]

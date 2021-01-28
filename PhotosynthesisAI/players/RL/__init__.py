@@ -1,1 +1,1 @@
-from .agents import LinearAI, NeuralNetworkAI, SKlearnNNAI
+from .agents import LinearAI, NeuralNetworkAI, SKlearnNNAI, DeepAI
