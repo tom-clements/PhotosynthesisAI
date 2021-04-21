@@ -5,34 +5,10 @@ MAX_SUN_ROTATIONS = 3
 
 # defining all the trees in the game per player
 TREES = {
-    "seed": {
-        "size": 0,
-        "total": 6,
-        "starting": 2,
-        "cost": [1, 1, 2, 2],
-        "score": 0,
-    },
-    "small": {
-        "size": 1,
-        "total": 8,
-        "starting": 4,
-        "cost": [2, 2, 3, 3],
-        "score": 1,
-    },
-    "medium": {
-        "size": 2,
-        "total": 4,
-        "starting": 1,
-        "cost": [3, 3, 4],
-        "score": 2,
-    },
-    "large": {
-        "size": 3,
-        "total": 2,
-        "starting": 0,
-        "cost": [4, 5],
-        "score": 3,
-    },
+    "seed": {"size": 0, "total": 6, "starting": 2, "cost": [1, 1, 2, 2], "score": 0,},
+    "small": {"size": 1, "total": 8, "starting": 4, "cost": [2, 2, 3, 3], "score": 1,},
+    "medium": {"size": 2, "total": 4, "starting": 1, "cost": [3, 3, 4], "score": 2,},
+    "large": {"size": 3, "total": 2, "starting": 0, "cost": [4, 5], "score": 3,},
 }
 
 # defining score of tokens based off richness

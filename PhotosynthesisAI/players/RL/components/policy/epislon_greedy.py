@@ -6,8 +6,11 @@ from PhotosynthesisAI.game.utils.utils import time_function
 
 
 def make_epsilon_greedy_policy(estimator, epsilon, num_actions):
+    print(num_actions)
     @time_function
     def policy_fn(state_features: List, available_actions: List):
+        print('****')
+        print(available_actions)
         A = np.ones(num_actions, dtype=float) * epsilon / (len(available_actions))
         A = np.array([(val if i in available_actions else 0) for i, val in enumerate(A)])
         q_values = estimator.predict(state_features)

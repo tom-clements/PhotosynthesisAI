@@ -14,16 +14,26 @@ logger = getLogger(__name__)
 
 
 class Estimator:
-    def __init__(self, total_num_actions: int, start_features: List, replay_length: int = 100):
+    def __init__(
+        self, total_num_actions: int, start_features: List, load_model: bool, name: str, replay_length: int = 100
+    ):
         self.total_num_actions = total_num_actions
+        self.load_model = load_model
+        self.name = name
         self._initialize_model(total_num_actions, start_features)
         self.replay = dict(features=[], y=[])
         self.replay_length = replay_length
         self.current_replay_size = 0
         self.replay_n_iter = 1
 
-    def _initialize_model(self, start_features):
-        self.model = None
+    def _initialize_model(self, total_num_actions, start_features):
+        if self.load_model:
+            self.model = self.unpickle_model(self.name)
+        else:
+            self.initialize_model(total_num_actions, start_features)
+
+    def initialize_model(self, total_num_actions, start_features):
+        pass
 
     @staticmethod
     def _features_to_model_input(state_features):
@@ -51,7 +61,8 @@ class Estimator:
             pickle.dump(self.model, f)
 
     @time_function
-    def load_model(self, name: str, path=None):
+    def unpickle_model(self, name: str, path=None):
         path = path if path else self._get_default_path(name)
         with open(path, "rb") as f:
-            self.model = pickle.load(f)
+            model = pickle.load(f)
+        return model

@@ -55,16 +55,22 @@ class Player:
             return []
 
         # check radius around trees to plant
-        surrounding_tiles = [board.get_surrounding_tiles(tree.tile, tree.size) for tree in trees_on_board]
+        # [[(from_tile, to_tile), (from_tile1, to_tile2), ...], [(from_tile2, to_tile_x) ...]]
+        surrounding_tiles = [
+            [(tree.tile, tile) for tile in board.get_surrounding_tiles(tuple(tree.tile.coords), tree.size)]
+            for tree in trees_on_board
+        ]
         # flatten
+        # [(from_tile, to_tile), (from_tile1, to_tile2), ..., (from_tile2, to_tile_x) ...]
         surrounding_tiles = [item for sublist in surrounding_tiles for item in sublist]
-        # deduplicate
-        surrounding_tiles = list(set(surrounding_tiles))
         # can only plant in empty unlocked tiles
         empty_unlocked_tiles = board.get_empty_unlocked_tiles()
-        surrounding_tiles = [tile for tile in surrounding_tiles if tile in empty_unlocked_tiles]
+        surrounding_tiles = [item for item in surrounding_tiles if item[0] in empty_unlocked_tiles]
+
         # only use seed[0] as no point duplicating moves for all free seeds
-        moves = [Plant(board=board, tile=tile, tree=seeds[0]) for tile in surrounding_tiles]
+        moves = [
+            Plant(board=board, tile=tile, from_tile=from_tile, tree=seeds[0]) for from_tile, tile in surrounding_tiles
+        ]
         return moves
 
     @time_function
@@ -94,7 +100,7 @@ class Player:
                     # check if can afford
                     if self.l_points < tree.size:
                         continue
-                    moves.append(Grow(board=board, tree=tree, to_tree=g_tree, cost=tree.size))
+                    moves.append(Grow(board=board, tree=tree, to_tree=g_tree, cost=tree.size + 1))
                     # there is no point having multiple moves for growing to all available trees, so break early
                     break
         return moves
@@ -108,11 +114,8 @@ class Player:
         return moves
 
     @time_function
-    def get_buying_moves(self, board: "Board", trees_bought: List[Tree], trees_in_shop: List[Tree]) -> List[Buy]:
-        bought_tree_sizes = list(set([tree.size for tree in trees_bought]))
-        trees_available = [
-            tree for tree in trees_in_shop if (tree.cost <= self.l_points) & (tree.size not in bought_tree_sizes)
-        ]
+    def get_buying_moves(self, board: "Board", trees_in_shop: List[Tree]) -> List[Buy]:
+        trees_available = [tree for tree in trees_in_shop if (tree.cost <= self.l_points)]
         if not trees_available:
             return []
         # get lowest price tree in shop
@@ -132,12 +135,6 @@ class Player:
                     if (tree.size == tree_spec["size"]) & (tree.cost == lowest_cost_tree_value)
                 ][0]
                 moves.append(Buy(board=board, tree=tree_to_buy, cost=tree_to_buy.cost))
-
-        # moves = [
-        #     Buy(board=board, tree=tree, cost=tree.cost)
-        #     for tree in trees_in_shop
-        #     if (tree.cost <= self.l_points) & (tree.size not in bought_tree_sizes)
-        # ]
         return moves
 
     @time_function
@@ -148,7 +145,7 @@ class Player:
         planting_moves = self.get_planting_moves(board, trees_on_board, trees_bought)
         growing_moves = self.get_growing_moves(board, trees_on_board, trees_bought)
         collecting_moves = self.get_collecting_moves(board, trees_on_board)
-        buying_moves = self.get_buying_moves(board, trees_bought, trees_in_shop)
+        buying_moves = self.get_buying_moves(board, trees_in_shop)
         return (
             planting_moves
             + growing_moves

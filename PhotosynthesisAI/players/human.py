@@ -8,7 +8,8 @@ from .. import Game
 
 class Human(BaseAI):
     def _input_move(self, moves, options, text):
-        print("Options", text, ", ".join(set(options)))
+        options = [str(o) for o in options]
+        print("Options", str(text), ", ".join(set(options)))
         picked_move_name = input("Pick a type of move to perform:")
         if picked_move_name == "undo":
             picked_moves = None

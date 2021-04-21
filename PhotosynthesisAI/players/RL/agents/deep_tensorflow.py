@@ -32,10 +32,9 @@ class TensorflowNNEstimator(Estimator):
         # model.add(layers.Flatten())
         # Classification Section (The Fully Connected Layer)
         # model.add(layers.Dense(120, activation='relu'))
-        model.add(layers.Dense(84, activation='relu', input_dim=len(start_features)))
+        model.add(layers.Dense(84, activation="relu", input_dim=len(start_features)))
         model.add(layers.Dense(total_num_actions))
-        model.compile(optimizer='adam', loss=tf.keras.losses.MeanSquaredError(),
-                      metrics=['accuracy'])
+        model.compile(optimizer="adam", loss=tf.keras.losses.MeanSquaredError(), metrics=["accuracy"])
         model.train_on_batch(x=self._features_to_model_input([start_features]), y=np.zeros((1, total_num_actions)))
         self.model = model
 
@@ -51,7 +50,6 @@ class TensorflowNNEstimator(Estimator):
         features = self._features_to_model_input([state_features])
         predictions = self.model.predict(features)
         return np.squeeze(predictions)
-
 
     def update(self, features, y):
         self.replay["features"].append(features)

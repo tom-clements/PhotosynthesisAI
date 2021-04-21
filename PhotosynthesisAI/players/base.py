@@ -2,7 +2,6 @@ from abc import abstractmethod
 from typing import List
 
 from PhotosynthesisAI import Game
-from PhotosynthesisAI.game.components import Board
 from PhotosynthesisAI.game.player.moves import Move
 from PhotosynthesisAI.game.player import Player
 

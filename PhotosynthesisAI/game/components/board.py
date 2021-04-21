@@ -125,10 +125,6 @@ class Board:
     # UTILS #
     #########
 
-    # Caching here may cause memory leaks if lots of games played -> care.
-    # This is because the Tile object is not that unique as it contains trees.
-    # Could refactor to remove trees here.
-
     @classmethod
     @lru_cache(maxsize=None)
     @time_function
@@ -139,10 +135,10 @@ class Board:
 
     @lru_cache(maxsize=None)
     @time_function
-    def get_surrounding_tiles(self, tile: Tile, radius: int) -> Tuple[Tile]:
-        surrounding_tile_coords = get_surrounding_coords(tuple(tile.coords), radius, BOARD_RADIUS)
+    def get_surrounding_tiles(self, coords: Tuple[int], radius: int) -> Tuple[Tile]:
+        surrounding_tile_coords = get_surrounding_coords(coords, radius, BOARD_RADIUS)
         surrounding_tiles = [
-            self.data.tiles[self._get_tile_index_from_coords(tuple(coord))] for coord in surrounding_tile_coords
+            self.data.tiles[self._get_tile_index_from_coords(coord)] for coord in surrounding_tile_coords
         ]
         return tuple(surrounding_tiles)
 
@@ -166,10 +162,10 @@ class Board:
 
     @lru_cache(maxsize=None)
     @time_function
-    def _get_tiles_along_same_axis(self, start_tile: Tile, axis: Tuple[int]) -> Tuple[Tile]:
+    def _get_tiles_along_same_axis(self, start_tile_coords: Tuple[int], axis: Tuple[int]) -> Tuple[Tile]:
         tiles = [
             self.data.tiles[self._get_tile_index_from_coords(tuple(coords))]
-            for coords in get_coords_along_same_axis(tuple(start_tile.coords), axis, BOARD_RADIUS)
+            for coords in get_coords_along_same_axis(start_tile_coords, axis, BOARD_RADIUS)
         ]
         return tuple(tiles)
 
@@ -200,7 +196,7 @@ class Board:
 
     @time_function
     def _set_shadows_along_axis(self, tile: Tile, axis: np.ndarray):
-        axis_tiles = self._get_tiles_along_same_axis(tile, tuple(axis))
+        axis_tiles = self._get_tiles_along_same_axis(tuple(tile.coords), tuple(axis))
         current_shadow_size = 0
         for axis_tile in axis_tiles:
             axis_tile.is_shadow = True if current_shadow_size > 0 else False
@@ -277,7 +273,7 @@ class Board:
         self.tree_of_trees[player.number]["bought"].pop(to_tree.id)
 
     @time_function
-    def plant_tree(self, tile: Tile, tree: Tree, cost: int):
+    def plant_tree(self, tile: Tile, tree: Tree, from_tile: Tile, cost: int):
         if tile.tree:
             raise ValueError("There is already a tree here")
         if tree.tile:
@@ -289,6 +285,9 @@ class Board:
         self.data.tiles[tile.index].tree = tree
         tree.tile = tile
         tile.is_locked = True
+        if from_tile:
+            print(1)
+            from_tile.is_locked = True
         player = [player for player in self.data.players if player.number == tile.tree.owner][0]
         player.l_points -= cost
         self.tree_of_trees[player.number]["on_board"].update({tree.id: tree})

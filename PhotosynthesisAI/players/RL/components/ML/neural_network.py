@@ -136,19 +136,11 @@ class NeuralNetwork(ABC):
             weight_updates, bias_updates = self._backward_propagation(A, Y)
             self._update_parameters(weight_updates, bias_updates)
 
-    def predict(self):
+    def predict(self, X):
         pass
 
     def reset(self):
         self.weights = self.bias = None
-
-
-if __name__ == "__main__":
-    X = np.array([[1.62434536, -0.61175641, -0.52817175], [-1.07296862, 0.86540763, -2.3015387]])
-    Y = np.array([[0, 1, 0]])
-    nn = NeuralNetwork(layer_sizes=(4, 1), seed=3)
-    nn.fit(X, Y, verbose=True)
-    predictions = nn.predict(X)
 
 
 class NNClassifier(NeuralNetwork):
@@ -199,3 +191,11 @@ class NNRegressor(NeuralNetwork):
         A = self._forward_propagation(X)
         predictions = A[final_layer]
         return np.squeeze(predictions).reshape(1, X.shape[1])
+
+
+if __name__ == "__main__":
+    X = np.array([[1.62434536, -0.61175641, -0.52817175], [-1.07296862, 0.86540763, -2.3015387]])
+    Y = np.array([[0, 1, 0]])
+    nn = NeuralNetwork(layer_sizes=(4, 1), seed=3)
+    nn.fit(X, Y, verbose=True)
+    predictions = nn.predict(X)

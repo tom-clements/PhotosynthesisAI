@@ -29,7 +29,8 @@ class ExpertSystemAI(BaseAI):
         if len(planting_moves) > 1:
             # get number of surrounding trees
             surrounding_tiles = [
-                sum([bool(tile.tree) for tile in board.get_surrounding_tiles(move.tile, 1)]) for move in planting_moves
+                sum([bool(tile.tree) for tile in board.get_surrounding_tiles(tuple(move.tile.coords), 1)])
+                for move in planting_moves
             ]
             planting_move = planting_moves[surrounding_tiles.index(min(surrounding_tiles))]
             availablle_moves = [
@@ -61,7 +62,8 @@ class ExpertSystemAI2(BaseAI):
         if len(planting_moves) > 1:
             # get number of surrounding trees
             surrounding_tiles = [
-                sum([bool(tile.tree) for tile in board.get_surrounding_tiles(move.tile, 1)]) for move in planting_moves
+                sum([bool(tile.tree) for tile in board.get_surrounding_tiles(tuple(move.tile.coords), 1)])
+                for move in planting_moves
             ]
             planting_move = planting_moves[surrounding_tiles.index(min(surrounding_tiles))]
             availablle_moves = [

@@ -19,9 +19,7 @@ LOSE_POINTS = 0
 
 class Series:
     def __init__(
-        self,
-        players: List[Player],
-        num_matches: int,
+        self, players: List[Player], num_matches: int,
     ):
         self.players = players
         self.num_matches = num_matches

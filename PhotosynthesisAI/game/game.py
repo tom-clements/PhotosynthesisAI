@@ -2,13 +2,15 @@ import time
 import gc
 import logging
 import random
+from functools import lru_cache
 from typing import List, Dict
 from copy import deepcopy
 
 import pandas as pd
+from cachetools import lru
 
 from .components import Board
-from PhotosynthesisAI.game.utils.constants import MAX_SUN_ROTATIONS, TREES
+from PhotosynthesisAI.game.utils.constants import MAX_SUN_ROTATIONS, TREES, BOARD_RADIUS
 from .player import Player
 from .utils.utils import hash_text, time_function
 
@@ -97,10 +99,18 @@ class Game:
 
     def _total_num_actions(self) -> int:
         num_tile_actions = len(self.board.data.tiles)
+        num_edge_tiles = (BOARD_RADIUS + 1) * 6
         num_buy_moves = len(TREES.keys())
         end_go_moves = 1
-        # plant + grow + collect = 3 * num_tile_actions
-        return num_tile_actions * 3 + num_buy_moves + end_go_moves
+
+        # each plant comes from a tree, so each tile has a radius 3 area around of possible plant moves
+        # + num_tile_actions for start moves
+        num_plant_moves = sum(
+            [len(self.board.get_surrounding_tiles(tuple(coords), radius=3)) for coords in self.board.tile_coords]
+        ) + num_edge_tiles
+
+        # grow + collect = 2 * num_tile_actions
+        return num_tile_actions * 2 + num_buy_moves + num_plant_moves + end_go_moves
 
     @time_function
     def get_linear_features(self, player) -> List:
@@ -195,7 +205,7 @@ class Game:
                 opp_num_medium_trees_owned,
                 opp_num_large_trees_owned,
                 opponent.l_points,
-                opponent.score
+                opponent.score,
             ]
         l_points = player.l_points
         score = player.score
@@ -204,18 +214,9 @@ class Game:
         features = (
             sizes
             + owners
-            + [
-                num_seeds_owned,
-                num_small_trees_owned,
-                num_medium_trees_owned,
-                num_large_trees_owned,
-                l_points,
-                score,
-            ] + opponent_numbers +
-            [
-                round_number,
-                round_turn_number,
-            ]
+            + [num_seeds_owned, num_small_trees_owned, num_medium_trees_owned, num_large_trees_owned, l_points, score,]
+            + opponent_numbers
+            + [round_number, round_turn_number,]
         )
         return features
 
@@ -279,6 +280,6 @@ class Game:
     @time_function
     def execute_move(self, move):
         player_types = [p.__class__.__name__ for p in self.players]
-        if 'Human' in player_types:
+        if "Human" in player_types:
             logger.info(f"Executing move: {move.get_move_name()}")
         move.execute()
